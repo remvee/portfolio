@@ -1,4 +1,5 @@
-(ns rubeneshuis (:use [compojure.core             :only [defroutes wrap! GET POST ANY]]
+(ns rubeneshuis (:use [clojure.contrib.str-utils]
+                      [compojure.core             :only [defroutes wrap! GET POST ANY]]
                       [hiccup.core]
                       [hiccup.page-helpers]
                       [hiccup.form-helpers]
@@ -13,7 +14,8 @@
                 "mail: <a href='mailto:r.e.eshuis@chello.nl'>r.e.eshuis@chello.nl</a>"
                 "www: <a href='http://www.rubeneshuis.com'>www.rubeneshuis.com</a>"])
 
-;; models
+;; state
+(def *admin* false)
 (def *collections*
      (ref [{:name "eerst collectie",
             :slug "test-1",
@@ -26,6 +28,7 @@
            {:name "test 3",
             :slug "test-3"}]))
 
+;; models
 (defn collections
   ([] (deref *collections*))
   ([where]
@@ -38,11 +41,28 @@
                        (keys where)))
              (collections))))
 
+(defn collections-slug [name]
+  (re-gsub #"-+" "-"
+           (re-gsub #"[^a-z0-9_-]" "-" name)))
+
+(defn collections-create [name]
+  (dosync (commute *collections*
+                   conj
+                   {:name name
+                    :slug (collections-slug name)})))
+
+(defn collections-update [collection attrs]
+  (let [new (merge collection attrs)]
+    (dosync (commute *collections*
+                     (fn [coll]
+                       (replace {collection new}
+                                coll))))
+    new))
+
 ;; routes
-(defn collection-url [collection]
-  (str "/collection/" (:slug collection)))
-(defn home-url []
-  "/home")
+(defn collections-url
+  ([] (if *admin* "/admin/collections" "/collections"))
+  ([collection] (str (collections-url) "/" (:slug collection))))
 
 ;; views
 (defn layout [& body]
@@ -55,40 +75,86 @@
       [:title
        (h *name*)]
       (include-css "/css/screen.css")]
-     [:body
+     [:body (when *admin* {:class "admin"})
       [:div.header
-       [:h1 (link-to (home-url) (h *name*))]]
+       [:h1 (link-to (collections-url) (h *name*))]]
       [:div.content
        body]
       [:div.footer
        (h *copyright*)]]])})
+
+(defn collection-create-form []
+  (form-to [:POST (collections-url)]
+           (text-field :name)
+           (submit-button "save")))
+
+(defn collection-update-form [collection]
+  (form-to [:POST (collections-url collection)]
+           (text-field :name (:name collection))
+           (submit-button "save")))
 
 (defn index-view []
   (layout [:ul
            (map (fn [collection]
                   [:li
                    [:h2
-                    [:a {:href (collection-url collection)}
+                    [:a {:href (collections-url collection)}
                      (h (:name collection))]]])
-                (collections))]
+                (collections))
+           (when *admin*
+             [:li
+              (collection-create-form)])]
           [:div.address
            (interpose [:br] *address*)]))
 
-(defn collection-view [slug]
-  (let [collection (first (collections {:slug slug}))]
-    (layout [:h2
-             [:a {:href (home-url)}
-              (h (:name collection))]]
-            [:ul.thumbs
-             (map (fn [photo]
-                    [:li.thumb
-                     [:img {:src (:file photo),
-                            :alt (:title photo)}]])
-                  (:photos collection))])))
+(defn collection-view [collection]
+  (layout [:h2
+           [:a {:href (collections-url)}
+            (h (:name collection))]]
+          (when *admin*
+            (collection-update-form collection))
+          [:ul.thumbs
+           (map (fn [photo]
+                  [:li.thumb
+                   [:img {:src (:file photo),
+                          :alt (:title photo)}]])
+                (:photos collection))]))
 
-(defroutes app
-  (GET "/home" [] (index-view))
-  (GET "/collection/:slug" [slug] (collection-view slug)))
+;; controllers
+(defmacro with-admin [& form]
+  `(binding [*admin* true]
+     ~@form))
+
+(defmacro defroutes-with-admin [name & routes]
+  (list* 'defroutes name
+         (mapcat (fn [route]
+                   (list route
+                         `(~(first route)
+                           ~(str "/admin" (second route))
+                           ~(nth route 2)
+                           (with-admin ~@(drop 3 route)))))
+                 routes)))
+
+(defroutes-with-admin frontend
+  (GET "/collections" []
+       (index-view))
+  (GET "/collections/:slug" [slug]
+       (collection-view (first (collections {:slug slug})))))
+
+(defroutes admin
+  (POST "/admin/collections" [name]
+        (with-admin
+          (collections-create name)
+          (redirect (collections-url))))
+  (POST "/admin/collections/:slug" [slug name]
+        (with-admin
+          (let [collection (first (collections {:slug slug}))]
+            (redirect
+             (collections-url
+              (collections-update collection {:name name})))))))
+
+(defroutes app frontend admin
+  (ANY "/*" [] (redirect "/")))
 
 (wrap! app
        :stacktrace
