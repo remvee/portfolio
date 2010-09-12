@@ -1,0 +1,5 @@
+(do
+  (require 'rubeneshuis)
+  (require 'ring.adapter.jetty)
+  (future
+    (ring.adapter.jetty/run-jetty (var rubeneshuis/app) {:port 8080})))
