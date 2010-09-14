@@ -75,3 +75,15 @@
                        (replace {collection new}
                                 coll))))
     (store!)))
+
+(defn photo-remove [collection slug]
+  (let [photo (photo-by-slug slug)
+        new (assoc collection :photos (filter #(not= slug (:slug %))
+                                              (:photos collection)))]
+    (when photo
+      (dosync (commute *collections*
+                       (fn [coll]
+                         (replace {collection new}
+                                  coll))))
+      (store!)
+      (io/delete-file (photo-file photo)))))
