@@ -21,6 +21,9 @@
 (defn photo-url [c p]
   (str (collections-url c) "/" (:slug p)))
 
+(defn photo-remove-url [c p]
+  (str (photo-url c p) "/remove"))
+
 (defn image-url [p size]
   (str "/image/" (:slug p) "/" size ".jpg"))
 
@@ -68,7 +71,7 @@
 (defn collection-create-form
   ([c] (form-to [:POST (collections-url)]
                 (form-field :name c "name")
-                (submit-button "create")))
+                (submit-button "add")))
   ([] (collection-create-form nil)))
 
 (defn collection-update-form [c]
@@ -78,6 +81,10 @@
            (form-field :photo c "photo" file-upload)
            (submit-button "update")))
 
+(defn photo-remove-form [c p]
+  (form-to [:POST (photo-remove-url c p)]
+           (submit-button "remove")))
+  
 (defn index-view []
   (layout [:ul
            (map (fn [c]
@@ -112,7 +119,9 @@
             (h (:name c))]]
           [:div.photo
            [:a {:href (collections-url c)}
-            [:img {:src (image-url p 'preview)}]]]))
+            [:img {:src (image-url p 'preview)}]]]
+          (when *admin*
+            (photo-remove-form c p))))
 
 (def *thumb-dimensions* {:width 100 :height 100})
 (def *preview-dimensions* {:width 500 :height 375})
@@ -179,6 +188,12 @@
             (data/collections-update c {:name name})
             (when (> (:size photo) 0)
               (data/photo-add c photo))
+            (redirect (collections-url c)))))
+
+  (POST "/admin/collections/:c-slug/:p-slug/remove" [c-slug p-slug]
+        (with-admin
+          (let [c (data/collection-by-slug c-slug)]
+            (data/photo-remove c p-slug)
             (redirect (collections-url c))))))
 
 (defroutes app frontend admin
