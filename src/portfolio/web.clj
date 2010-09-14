@@ -18,6 +18,9 @@
   ([] (if *admin* "/admin/collections" "/collections"))
   ([c] (str (collections-url) "/" (:slug c))))
 
+(defn photo-url [c p]
+  (str (collections-url c) "/" (:slug p)))
+
 (defn thumb-url [p]
   (str "/thumbs/" (:slug p)))
 
@@ -91,16 +94,24 @@
 
 (defn collection-view [c]
   (layout [:h2
-           [:a {:href (collections-url)}
+           [:a {:href (collections-url c)}
             (h (:name c))]]
           [:ul.thumbs
            (map (fn [p]
                   [:li.thumb
-                   [:img {:src (thumb-url p),
-                          :alt (:title p)}]])
+                   [:a {:href (photo-url c p)}
+                    [:img {:src (thumb-url p),
+                           :alt (:title p)}]]])
                 (:photos c))]
           (when *admin*
             (collection-update-form c))))
+
+(defn photo-view [c p]
+  (layout [:h2
+           [:a {:href (collections-url c)}
+            (h (:name c))]]
+          [:div.photo
+           [:img {:src (thumb-url p)}]]))
 
 (defn thumb-view [p]
   (let [image (-> (java.io.File. (photo-file p)) images/from-file)
@@ -132,8 +143,15 @@
 (defroutes-with-admin frontend
   (GET "/collections" []
        (index-view))
+  
   (GET "/collections/:slug" [slug]
        (collection-view (data/collection-by-slug slug)))
+  
+  (GET "/collections/:c-slug/:p-slug" [c-slug p-slug]
+       (let [c (data/collection-by-slug c-slug)
+             p (data/photo-by-slug p-slug)]
+         (photo-view c p)))
+  
   (GET "/thumbs/:slug" [slug]
        (thumb-view (data/photo-by-slug slug))))
 
