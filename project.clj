@@ -1,5 +1,5 @@
-(defproject rubeneshuis "1.0.0-SNAPSHOT"
-  :description "rubeneshuis.com"
+(defproject portfolio "1.0.0-SNAPSHOT"
+  :description "simple portfolio website"
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.clojure/clojure-contrib "1.2.0"]
                  [compojure "0.4.1"]

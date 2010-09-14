@@ -1,4 +1,4 @@
-(ns images)
+(ns portfolio.images)
 
 (defn scale [image width height]
   (.getScaledInstance image width height java.awt.Image/SCALE_SMOOTH))
@@ -9,10 +9,10 @@
 (defn dimensions [image]
   [(.getWidth image) (.getHeight image)])
 
-(defn file->image [file]
+(defn from-file [file]
   (. javax.imageio.ImageIO read file))
 
-(defn image->stream [image]
+(defn to-stream [image]
   (let [in (java.io.PipedInputStream.)
         out (java.io.PipedOutputStream. in)
         result (java.awt.image.BufferedImage.
