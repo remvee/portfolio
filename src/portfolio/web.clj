@@ -21,8 +21,8 @@
 (defn photo-url [c p]
   (str (collections-url c) "/" (:slug p)))
 
-(defn thumb-url [p]
-  (str "/thumbs/" (:slug p)))
+(defn image-url [p size]
+  (str "/image/" (:slug p) "/" size ".jpg"))
 
 ;; helpers
 (def uniq-id-counter (ThreadLocal.))
@@ -100,7 +100,7 @@
            (map (fn [p]
                   [:li.thumb
                    [:a {:href (photo-url c p)}
-                    [:img {:src (thumb-url p),
+                    [:img {:src (image-url p 'thumb),
                            :alt (:title p)}]]])
                 (:photos c))]
           (when *admin*
@@ -111,19 +111,25 @@
            [:a {:href (collections-url c)}
             (h (:name c))]]
           [:div.photo
-           [:img {:src (thumb-url p)}]]))
+           [:a {:href (collections-url c)}
+            [:img {:src (image-url p 'preview)}]]]))
 
-(defn thumb-view [p]
+(defn image-response [p size]
   (let [image (-> (java.io.File. (photo-file p)) images/from-file)
         [width height] (images/dimensions image)
         min (min width height)]
     {:content-type "image/jpeg"
-     :body (-> image
-               (images/crop (if (> width min) (/ (- width min) 2) 0)
-                            (if (> height min) (/ (- height min) 2) 0)
-                            min min)
-               (images/scale 100 100)
-               images/to-stream)}))
+     :body (condp = size
+               "thumb" (-> image
+                           (images/crop (if (> width min) (/ (- width min) 2) 0)
+                                        (if (> height min) (/ (- height min) 2) 0)
+                                        min min)
+                           (images/scale 100 100)
+                           images/to-stream)
+               "preview" (-> image
+                           (images/scale 525 -1)
+                           images/to-stream))
+               }))
   
 ;; controllers
 (defmacro with-admin [& form]
@@ -152,8 +158,8 @@
              p (data/photo-by-slug p-slug)]
          (photo-view c p)))
   
-  (GET "/thumbs/:slug" [slug]
-       (thumb-view (data/photo-by-slug slug))))
+  (GET "/image/:slug/:size.jpg" [slug size]
+       (image-response (data/photo-by-slug slug) size)))
 
 (defroutes admin
   (POST "/admin/collections" [name]

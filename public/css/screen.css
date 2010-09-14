@@ -85,3 +85,6 @@ div.collections ul li {
     height: 110px;
     float: left;
 }
+.photo img {
+    margin: 0 0 10px 0;
+}
