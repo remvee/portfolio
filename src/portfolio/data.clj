@@ -1,6 +1,6 @@
 (ns portfolio.data
   (:use [clojure.contrib.str-utils]
-        [clojure.contrib.io :only [copy file]]))
+        [clojure.contrib.io :as io :only [copy file]]))
 
 ;; fixtures
 (def *name* "Ruben Eshuis Photography")
@@ -11,7 +11,12 @@
                 "www: <a href='http://www.rubeneshuis.com'>www.rubeneshuis.com</a>"])
 
 ;; state
-(def *collections* (ref []))
+(declare *collections*)
+(def *data-file* "/tmp/portfolio.sexp")
+(defn- store! [] (spit *data-file* (pr-str (deref *collections*))))
+(defn- read! [] (if (.canRead (io/file *data-file*)) (read-string (slurp *data-file*)) []))
+
+(def *collections* (ref (read!)))
 
 ;; helpers
 (defn name->slug [name]
@@ -19,6 +24,8 @@
            (re-gsub #"[^a-z0-9_-]" "-" name)))
 
 ;; models
+
+  
 (defn collections
   ([] (deref *collections*))
   ([where]
@@ -38,7 +45,8 @@
   (dosync (commute *collections*
                    conj
                    {:name name
-                    :slug (name->slug name)})))
+                    :slug (name->slug name)}))
+  (store!))
 
 (defn collections-update [collection attrs]
   (let [new (merge collection attrs)]
@@ -46,6 +54,7 @@
                      (fn [coll]
                        (replace {collection new}
                                 coll))))
+    (store!)
     new))
 
 (defn photo-by-slug [slug]
@@ -60,8 +69,9 @@
                :title (:filename upload)}
         new (assoc collection :photos (conj (or (:photos collection) [])
                                             photo))]
-    (copy (:tempfile upload) (file (photo-file photo)))
+    (io/copy (:tempfile upload) (io/file (photo-file photo)))
     (dosync (commute *collections*
                      (fn [coll]
                        (replace {collection new}
-                                coll))))))
+                                coll))))
+    (store!)))
