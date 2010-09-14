@@ -1,11 +1,13 @@
-(ns rubeneshuis (:use [clojure.contrib.str-utils]
+(ns rubeneshuis (:use [images]
+                      [clojure.contrib.str-utils]
                       [compojure.core             :only [defroutes wrap! GET POST ANY]]
                       [hiccup.core]
                       [hiccup.page-helpers]
                       [hiccup.form-helpers]
                       [ring.util.response         :only [redirect]]
                       [ring.middleware.stacktrace :only [wrap-stacktrace]]
-                      [ring.middleware.file       :only [wrap-file]]))
+                      [ring.middleware.file       :only [wrap-file]]
+                      [ring.middleware.multipart-params :only [wrap-multipart-params]]))
 
 (def *name* "Ruben Eshuis Photography")
 (def *copyright* "Copyright all images Ruben Eshuis Photography")
@@ -64,6 +66,9 @@
   ([] (if *admin* "/admin/collections" "/collections"))
   ([collection] (str (collections-url) "/" (:slug collection))))
 
+(defn thumb-url [collection photo]
+  (str "/thumbs/" (:slug collection) "/" (:file photo)))
+
 ;; views
 (defn layout [& body]
   {:headers {"Content-Type" "text/html"}
@@ -116,9 +121,23 @@
           [:ul.thumbs
            (map (fn [photo]
                   [:li.thumb
-                   [:img {:src (:file photo),
+                   [:img {:src (thumb-url collection photo),
                           :alt (:title photo)}]])
                 (:photos collection))]))
+
+(defn thumb-view [photo]
+  (let [image (-> (java.io.File. (str "/tmp/" (:file photo))) file->image)
+        [width height] (dimensions image)
+        min (min width height)]
+    {:content-type "image/jpeg"
+     :body (-> image
+               (crop (if (> width min) (/ (- width min) 2) 0)
+                     (if (> height min) (/ (- height min) 2) 0)
+                     min min)
+               (scale 100 100)
+               image->stream)}))
+
+;(thumb-view {:file "cool.jpg"})
 
 ;; controllers
 (defmacro with-admin [& form]
@@ -139,7 +158,11 @@
   (GET "/collections" []
        (index-view))
   (GET "/collections/:slug" [slug]
-       (collection-view (first (collections {:slug slug})))))
+       (collection-view (first (collections {:slug slug}))))
+  (GET ["/thumbs/:slug/:file", :file  #"[a-z0-9.-]+"] [slug file]
+       (let [collection (first (collections {:slug slug}))
+             photo (first (filter #(= file (:file %)) (:photos collection)))]
+         (thumb-view photo))))
 
 (defroutes admin
   (POST "/admin/collections" [name]
