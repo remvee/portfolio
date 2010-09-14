@@ -37,7 +37,7 @@
 (defn collection-by-slug [slug]
   (first (collections {:slug slug})))
 
-(defn collections-slug [name]
+(defn name->slug [name]
   (re-gsub #"-+" "-"
            (re-gsub #"[^a-z0-9_-]" "-" name)))
 
@@ -45,7 +45,7 @@
   (dosync (commute *collections*
                    conj
                    {:name name
-                    :slug (collections-slug name)})))
+                    :slug (name->slug name)})))
 
 (defn collections-update [collection attrs]
   (let [new (merge collection attrs)]
@@ -55,15 +55,15 @@
                                 coll))))
     new))
 
-(defn photo-by-id [id]
-  (first (filter #(= id (str (:id %)))
+(defn photo-by-slug [slug]
+  (first (filter #(= slug (str (:slug %)))
                  (flatten (map :photos @*collections*)))))
 
 (defn photo-file [photo]
-  (str "/tmp/photo-" (:id photo)))
+  (str "/tmp/photo-" (:slug photo)))
   
 (defn photo-add [collection upload]
-  (let [photo {:id (. System currentTimeMillis)
+  (let [photo {:slug (name->slug (:filename upload))
                :title (:filename upload)}
         new (assoc collection :photos (conj (or (:photos collection) [])
                                             photo))]
@@ -102,7 +102,7 @@
   ([collection] (str (collections-url) "/" (:slug collection))))
 
 (defn thumb-url [photo]
-  (str "/thumbs/" (:id photo)))
+  (str "/thumbs/" (:slug photo)))
 
 (defn photo-add-url [collection]
   (str "/admin/collections/" (:slug collection) "/photo"))
@@ -201,8 +201,8 @@
        (index-view))
   (GET "/collections/:slug" [slug]
        (collection-view (collection-by-slug slug)))
-  (GET "/thumbs/:id" [id]
-       (thumb-view (photo-by-id id))))
+  (GET "/thumbs/:slug" [slug]
+       (thumb-view (photo-by-slug slug))))
 
 (defroutes admin
   (POST "/admin/collections" [name]
