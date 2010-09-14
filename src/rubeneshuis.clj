@@ -1,5 +1,6 @@
 (ns rubeneshuis (:use [images]
                       [clojure.contrib.str-utils]
+                      [clojure.contrib.io :as io :only [copy file]]
                       [compojure.core             :only [defroutes wrap! GET POST ANY]]
                       [hiccup.core]
                       [hiccup.page-helpers]
@@ -18,17 +19,7 @@
 
 ;; state
 (def *admin* false)
-(def *collections*
-     (ref [{:name "eerst collectie",
-            :slug "test-1",
-            :photos [{:title "cool",
-                      :file "cool.jpg"},
-                     {:title "not so cool",
-                      :file "lame.jpg"}]}
-           {:name "test 2",
-            :slug "test-2"}
-           {:name "test 3",
-            :slug "test-3"}]))
+(def *collections* (ref []))
 
 ;; models
 (defn collections
@@ -61,13 +52,53 @@
                                 coll))))
     new))
 
+(defn photo-file [photo]
+  (str "/tmp/photo-" (:id photo)))
+  
+(defn photo-add [collection upload]
+  (let [photo {:id (. System currentTimeMillis)
+               :title (:filename upload)}
+        new (assoc collection :photos (conj (or (:photos collection) [])
+                                            photo))]
+    (io/copy (:tempfile upload) (io/file (photo-file photo)))
+    (dosync (commute *collections*
+                     (fn [coll]
+                       (replace {collection new}
+                                coll))))))
+
+; view helpers
+(defmulti htmlify class)
+
+(defmethod htmlify java.util.Map [value]
+  (html
+   [:dl
+    (map #(html [:dt (str (first %))]
+                [:dd (htmlify (last %))]) value)]))
+
+(defmethod htmlify java.util.List [value]
+  (html
+   [:ul
+    (map #(html [:li (htmlify %)]) value)]))
+
+(defmethod htmlify java.lang.Object [value]
+  (html
+   [:pre
+    (h (str "<" (-> value class .getName) " " value ">"))]))
+
+(defmethod htmlify nil [_]
+  (html
+   [:em "nil"]))
+    
 ;; routes
 (defn collections-url
   ([] (if *admin* "/admin/collections" "/collections"))
   ([collection] (str (collections-url) "/" (:slug collection))))
 
-(defn thumb-url [collection photo]
-  (str "/thumbs/" (:slug collection) "/" (:file photo)))
+(defn thumb-url [photo]
+  (str "/thumbs/" (:id photo)))
+
+(defn photo-add-url [collection]
+  (str "/admin/collections/" (:slug collection) "/photo"))
 
 ;; views
 (defn layout [& body]
@@ -91,12 +122,18 @@
 (defn collection-create-form []
   (form-to [:POST (collections-url)]
            (text-field :name)
-           (submit-button "save")))
+           (submit-button "create")))
 
 (defn collection-update-form [collection]
   (form-to [:POST (collections-url collection)]
            (text-field :name (:name collection))
-           (submit-button "save")))
+           (submit-button "update")))
+
+(defn photo-add-form [collection]
+  (form-to {:enctype "multipart/form-data"}
+           [:POST (photo-add-url collection)]
+           (file-upload :photo) 
+           (submit-button "upload")))
 
 (defn index-view []
   (layout [:ul
@@ -116,17 +153,17 @@
   (layout [:h2
            [:a {:href (collections-url)}
             (h (:name collection))]]
-          (when *admin*
-            (collection-update-form collection))
           [:ul.thumbs
            (map (fn [photo]
                   [:li.thumb
-                   [:img {:src (thumb-url collection photo),
+                   [:img {:src (thumb-url photo),
                           :alt (:title photo)}]])
-                (:photos collection))]))
+                (:photos collection))]
+          (when *admin*
+            (photo-add-form collection))))
 
 (defn thumb-view [photo]
-  (let [image (-> (java.io.File. (str "/tmp/" (:file photo))) file->image)
+  (let [image (-> (java.io.File. (photo-file photo)) file->image)
         [width height] (dimensions image)
         min (min width height)]
     {:content-type "image/jpeg"
@@ -136,8 +173,6 @@
                      min min)
                (scale 100 100)
                image->stream)}))
-
-;(thumb-view {:file "cool.jpg"})
 
 ;; controllers
 (defmacro with-admin [& form]
@@ -159,9 +194,9 @@
        (index-view))
   (GET "/collections/:slug" [slug]
        (collection-view (first (collections {:slug slug}))))
-  (GET ["/thumbs/:slug/:file", :file  #"[a-z0-9.-]+"] [slug file]
-       (let [collection (first (collections {:slug slug}))
-             photo (first (filter #(= file (:file %)) (:photos collection)))]
+  (GET "/thumbs/:id" [id]
+       (let [photo (first (filter #(= id (str (:id %)))
+                                  (flatten (map :photos @*collections*))))]
          (thumb-view photo))))
 
 (defroutes admin
@@ -169,16 +204,23 @@
         (with-admin
           (collections-create name)
           (redirect (collections-url))))
-  (POST "/admin/collections/:slug" [slug name]
+  
+  (POST "/admin/collections/:slug" [slug name photo]
         (with-admin
           (let [collection (first (collections {:slug slug}))]
-            (redirect
-             (collections-url
-              (collections-update collection {:name name})))))))
+            (collections-update collection {:name name})
+            (redirect (collections-url collection)))))
+
+  (POST "/admin/collections/:slug/photo" [slug photo]
+        (with-admin
+          (let [collection (first (collections {:slug slug}))]
+            (photo-add collection photo)
+            (redirect (collections-url collection))))))
 
 (defroutes app frontend admin
   (ANY "/*" [] (redirect "/")))
 
 (wrap! app
        :stacktrace
+       :multipart-params
        (:file "public"))

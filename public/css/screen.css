@@ -28,7 +28,7 @@ a {
 body {
     margin: 50px auto;
     text-align: center;
-    width: 500px
+    width: 550px
 }
 h1 {
     font-size: 36px;
@@ -37,6 +37,10 @@ h1 {
 h2 {
     font-size: 20px;
     font-weight: normal;
+}
+form {
+    margin: 1em;
+    clear: both;
 }
 div.header, div.address, div.footer {
     margin: auto;
@@ -71,7 +75,7 @@ div.collections ul li {
 .thumbs {
     display: block;
     margin: auto;
-    width: 440px;
+    width: 550px;
 }
 .thumb {
     display: block;
@@ -80,8 +84,4 @@ div.collections ul li {
     width: 110px;
     height: 110px;
     float: left;
-}
-div.thumb a {
-    display: block;
-    margin: auto;
 }
