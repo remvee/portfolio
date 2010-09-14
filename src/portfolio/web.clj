@@ -114,21 +114,27 @@
            [:a {:href (collections-url c)}
             [:img {:src (image-url p 'preview)}]]]))
 
+(def *thumb-dimensions* {:width 100 :height 100})
+(def *preview-dimensions* {:width 500 :height 375})
+
 (defn image-response [p size]
   (let [image (-> (java.io.File. (photo-file p)) images/from-file)
         [width height] (images/dimensions image)
-        min (min width height)]
+        min (min width height)
+        max (max width height)]
     {:content-type "image/jpeg"
      :body (condp = size
                "thumb" (-> image
                            (images/crop (if (> width min) (/ (- width min) 2) 0)
                                         (if (> height min) (/ (- height min) 2) 0)
                                         min min)
-                           (images/scale 100 100)
+                           (images/scale (:width *thumb-dimensions*)
+                                         (:height *thumb-dimensions*))
                            images/to-stream)
-               "preview" (-> image
-                           (images/scale 525 -1)
-                           images/to-stream))
+               "preview" (images/to-stream (if (> (/ width (:width *preview-dimensions*))
+                                                  (/ height (:height *preview-dimensions*)))
+                                             (images/scale image (:width *preview-dimensions*) -1)
+                                             (images/scale image -1 (:height *preview-dimensions*)))))
                }))
   
 ;; controllers
