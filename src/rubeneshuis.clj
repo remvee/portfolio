@@ -34,6 +34,9 @@
                        (keys where)))
              (collections))))
 
+(defn collection-by-slug [slug]
+  (first (collections {:slug slug})))
+
 (defn collections-slug [name]
   (re-gsub #"-+" "-"
            (re-gsub #"[^a-z0-9_-]" "-" name)))
@@ -51,6 +54,10 @@
                        (replace {collection new}
                                 coll))))
     new))
+
+(defn photo-by-id [id]
+  (first (filter #(= id (str (:id %)))
+                 (flatten (map :photos @*collections*)))))
 
 (defn photo-file [photo]
   (str "/tmp/photo-" (:id photo)))
@@ -193,11 +200,9 @@
   (GET "/collections" []
        (index-view))
   (GET "/collections/:slug" [slug]
-       (collection-view (first (collections {:slug slug}))))
+       (collection-view (collection-by-slug slug)))
   (GET "/thumbs/:id" [id]
-       (let [photo (first (filter #(= id (str (:id %)))
-                                  (flatten (map :photos @*collections*))))]
-         (thumb-view photo))))
+       (thumb-view (photo-by-id id))))
 
 (defroutes admin
   (POST "/admin/collections" [name]
@@ -207,13 +212,13 @@
   
   (POST "/admin/collections/:slug" [slug name photo]
         (with-admin
-          (let [collection (first (collections {:slug slug}))]
+          (let [collection (collection-by-slug slug)]
             (collections-update collection {:name name})
             (redirect (collections-url collection)))))
 
   (POST "/admin/collections/:slug/photo" [slug photo]
         (with-admin
-          (let [collection (first (collections {:slug slug}))]
+          (let [collection (collection-by-slug slug)]
             (photo-add collection photo)
             (redirect (collections-url collection))))))
 
