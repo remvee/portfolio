@@ -78,8 +78,8 @@
 
 (defn photo-remove [collection slug]
   (let [photo (photo-by-slug slug)
-        new (assoc collection :photos (filter #(not= slug (:slug %))
-                                              (:photos collection)))]
+        new (assoc collection :photos (vec (filter #(not= slug (:slug %))
+                                                   (:photos collection))))]
     (when photo
       (dosync (commute *collections*
                        (fn [coll]
