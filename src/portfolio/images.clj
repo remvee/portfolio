@@ -1,9 +1,9 @@
 (ns portfolio.images)
 
-(defn scale [image width height]
+(defn scale [image [width height]]
   (.getScaledInstance image width height java.awt.Image/SCALE_SMOOTH))
 
-(defn crop [image x y width height]
+(defn crop [image [x y] [width height]]
   (.getSubimage image x y width height))
 
 (defn dimensions [image]

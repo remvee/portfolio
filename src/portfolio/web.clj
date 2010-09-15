@@ -123,8 +123,8 @@
           (when *admin*
             (photo-remove-form c p))))
 
-(def *thumb-dimensions* {:width 100 :height 100})
-(def *preview-dimensions* {:width 500 :height 375})
+(def *thumb-dimensions* [100 100])
+(def *preview-dimensions* [500 375])
 
 (defn image-response [p size]
   (let [image (-> (java.io.File. (photo-file p)) images/from-file)
@@ -134,16 +134,15 @@
     {:content-type "image/jpeg"
      :body (condp = size
                "thumb" (-> image
-                           (images/crop (if (> width min) (/ (- width min) 2) 0)
-                                        (if (> height min) (/ (- height min) 2) 0)
-                                        min min)
-                           (images/scale (:width *thumb-dimensions*)
-                                         (:height *thumb-dimensions*))
+                           (images/crop [(if (> width min) (/ (- width min) 2) 0)
+                                         (if (> height min) (/ (- height min) 2) 0)]
+                                        [min min])
+                           (images/scale *thumb-dimensions*)
                            images/to-stream)
-               "preview" (images/to-stream (if (> (/ width (:width *preview-dimensions*))
-                                                  (/ height (:height *preview-dimensions*)))
-                                             (images/scale image (:width *preview-dimensions*) -1)
-                                             (images/scale image -1 (:height *preview-dimensions*)))))
+               "preview" (images/to-stream (if (> (/ width (first *preview-dimensions*))
+                                                  (/ height (last *preview-dimensions*)))
+                                             (images/scale image [(first *preview-dimensions*) -1])
+                                             (images/scale image [-1 (last *preview-dimensions*)]))))
                }))
   
 ;; controllers
