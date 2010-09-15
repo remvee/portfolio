@@ -218,13 +218,14 @@
         (with-admin
           (let [c (data/collection-by-slug c-slug)
                 p (data/photo-by-slug p-slug)]
-            (data/photo-update c p-slug {:title title})
+            (data/photo-update c p {:title title})
             (redirect (photo-url c p)))))
 
   (POST "/admin/collections/:c-slug/:p-slug/remove" [c-slug p-slug]
         (with-admin
-          (let [c (data/collection-by-slug c-slug)]
-            (data/photo-remove c p-slug)
+          (let [c (data/collection-by-slug c-slug)
+                p (data/photo-by-slug p-slug)]
+            (data/photo-remove c p)
             (redirect (collections-url c))))))
 
 (defroutes app frontend admin

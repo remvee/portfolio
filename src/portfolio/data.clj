@@ -76,9 +76,9 @@
                                 coll))))
     (store!)))
 
-(defn photo-remove [collection slug]
-  (let [photo (photo-by-slug slug)
-        new (assoc collection :photos (vec (filter #(not= slug (:slug %))
+(defn photo-remove [collection photo]
+  (let [new (assoc collection :photos (vec (filter #(not= (:slug photo)
+                                                          (:slug %))
                                                    (:photos collection))))]
     (when photo
       (dosync (commute *collections*
@@ -88,9 +88,8 @@
       (store!)
       (io/delete-file (photo-file photo)))))
 
-(defn photo-update [collection slug attrs]
-  (let [photo (photo-by-slug slug)
-        new (assoc collection :photos (replace {photo (merge photo attrs)}
+(defn photo-update [collection photo attrs]
+  (let [new (assoc collection :photos (replace {photo (merge photo attrs)}
                                                (:photos collection)))]
     (dosync (commute *collections*
                      (fn [coll]
