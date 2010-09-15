@@ -64,12 +64,12 @@
 (defn photo-file [photo]
   (str "/tmp/photo-" (:slug photo)))
   
-(defn photo-add [collection upload]
-  (let [photo {:slug (name->slug (:filename upload))
-               :title (:filename upload)}
+(defn photo-add [collection attrs]
+  (let [photo {:slug (name->slug (:filename attrs))
+               :title (:title attrs)}
         new (assoc collection :photos (conj (or (:photos collection) [])
                                             photo))]
-    (io/copy (:tempfile upload) (io/file (photo-file photo)))
+    (io/copy (:tempfile attrs) (io/file (photo-file photo)))
     (dosync (commute *collections*
                      (fn [coll]
                        (replace {collection new}
@@ -87,3 +87,13 @@
                                   coll))))
       (store!)
       (io/delete-file (photo-file photo)))))
+
+(defn photo-update [collection slug attrs]
+  (let [photo (photo-by-slug slug)
+        new (assoc collection :photos (replace {photo (merge photo attrs)}
+                                               (:photos collection)))]
+    (dosync (commute *collections*
+                     (fn [coll]
+                       (replace {collection new}
+                                coll))))
+    (store!)))
