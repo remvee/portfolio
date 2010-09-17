@@ -150,12 +150,18 @@
 (def *thumb-dimensions* [100 100])
 (def *preview-dimensions* [500 375])
 
+(def rfc1123 (java.text.SimpleDateFormat. "EEE, dd MMM yyyy HH:mm:ss z"))
+(.setTimeZone rfc1123 (java.util.TimeZone/getTimeZone "GMT"))
+
 (defn image-response [p size]
   (let [image (-> (java.io.File. (photo-file p)) images/from-file)
         [width height] (images/dimensions image)
         min (min width height)
         max (max width height)]
-    {:content-type "image/jpeg"
+    {:headers {"Content-Type" "image/jpeg"
+               "Expire" (.format rfc1123
+                                 (java.util.Date. (+ (System/currentTimeMillis)
+                                                     (* 1000 60 60 24 365))))}
      :body (condp = size
                "thumb" (-> image
                            (images/crop [(if (> width min) (/ (- width min) 2) 0)
