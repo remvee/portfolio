@@ -6,4 +6,6 @@
                  [hiccup "0.2.6"]
                  [ring/ring-jetty-adapter "0.2.5"]
                  [ring/ring-devel "0.2.5"]]
-  :dev-dependencies [[swank-clojure "1.2.1"]])
+  :dev-dependencies [[swank-clojure "1.2.1"]
+                     [lein-run "1.0.0"]]
+  :run-aliases {:server ["script/server.clj"]})
