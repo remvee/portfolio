@@ -8,6 +8,7 @@
                         [ring.util.response               :only [redirect]]
                         [ring.middleware.stacktrace       :only [wrap-stacktrace]]
                         [ring.middleware.file             :only [wrap-file]]
+                        [ring.middleware.file-info        :only [wrap-file-info]]
                         [ring.middleware.multipart-params :only [wrap-multipart-params]]))
 
 ;; state
@@ -236,4 +237,5 @@
 (wrap! app
        :stacktrace ; TODO remove me
        :multipart-params
-       (:file "public"))
+       (:file "public")
+       :file-info)
