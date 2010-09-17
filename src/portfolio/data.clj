@@ -24,8 +24,6 @@
            (re-gsub #"[^a-z0-9_-]" "-" name)))
 
 ;; models
-
-  
 (defn collections
   ([] (deref *collections*))
   ([where]
@@ -57,6 +55,10 @@
     (store!)
     new))
 
+(defn collection-by-photo [photo]
+  (first (filter #(some (partial = photo) (:photos %))
+                 (collections))))
+
 (defn photo-by-slug [slug]
   (first (filter #(= slug (str (:slug %)))
                  (flatten (map :photos @*collections*)))))
@@ -76,8 +78,9 @@
                                 coll))))
     (store!)))
 
-(defn photo-remove [collection photo]
-  (let [new (assoc collection :photos (vec (filter #(not= (:slug photo)
+(defn photo-remove [photo]
+  (let [collection (collection-by-photo photo)
+        new (assoc collection :photos (vec (filter #(not= (:slug photo)
                                                           (:slug %))
                                                    (:photos collection))))]
     (when photo
@@ -88,11 +91,13 @@
       (store!)
       (io/delete-file (photo-file photo)))))
 
-(defn photo-update [collection photo attrs]
-  (let [new (assoc collection :photos (replace {photo (merge photo attrs)}
+(defn photo-update [photo attrs]
+  (let [collection (collection-by-photo photo)
+        new (assoc collection :photos (replace {photo (merge photo attrs)}
                                                (:photos collection)))]
     (dosync (commute *collections*
                      (fn [coll]
                        (replace {collection new}
                                 coll))))
     (store!)))
+ 

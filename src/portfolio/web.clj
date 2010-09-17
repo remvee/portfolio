@@ -14,18 +14,21 @@
 (def *admin* false)
     
 ;; routes
-(defn collections-url
-  ([] (if *admin* "/admin/collections" "/collections"))
-  ([c] (str (collections-url) "/" (:slug c))))
+(defn collections-url []
+  (if *admin* "/admin/collections" "/collections"))
 
-(defn photo-url [c p]
-  (str (collections-url c) "/" (:slug p)))
+(defn collection-url [c]
+  (str (if *admin* "/admin/collection" "/collection") "/" (:slug c)))
+
+(defn photo-url [p]
+  (str (if *admin* "/admin/photo" "/photo")
+       "/" (:slug p)))
 
 (defn photo-add-url [c]
-  (str (collections-url c) "/add"))
+  (str (collection-url c) "/add"))
 
-(defn photo-remove-url [c p]
-  (str (photo-url c p) "/remove"))
+(defn photo-remove-url [p]
+  (str (photo-url p) "/remove"))
 
 (defn image-url [p size]
   (str "/image/" (:slug p) "/" size ".jpg"))
@@ -78,12 +81,12 @@
   ([] (collection-create-form nil)))
 
 (defn collection-update-form [c]
-  (form-to [:POST (collections-url c)]
+  (form-to [:POST (collection-url c)]
            (form-field :name c "name")
            (submit-button "update")))
 
-(defn photo-update-form [c p]
-  (form-to [:POST (photo-url c p)]
+(defn photo-update-form [p]
+  (form-to [:POST (photo-url p)]
            (form-field :title p "title")
            (submit-button "update")))
 
@@ -94,8 +97,8 @@
            (form-field :photo c "photo" file-upload)
            (submit-button "upload")))
 
-(defn photo-remove-form [c p]
-  (form-to [:POST (photo-remove-url c p)]
+(defn photo-remove-form [p]
+  (form-to [:POST (photo-remove-url p)]
            (submit-button "remove")))
   
 (defn index-view []
@@ -103,7 +106,7 @@
            (map (fn [c]
                   [:li
                    [:h2
-                    [:a {:href (collections-url c)}
+                    [:a {:href (collection-url c)}
                      (h (:name c))]]])
                 (collections))
            (when *admin*
@@ -116,12 +119,12 @@
   (layout (if *admin*
             (collection-update-form c)
             [:h2
-             [:a {:href (collections-url c)}
+             [:a {:href (collection-url c)}
               (h (:name c))]])
           [:ul.thumbs
            (map (fn [p]
                   [:li.thumb
-                   [:a {:href (photo-url c p)}
+                   [:a {:href (photo-url p)}
                     [:img {:src (image-url p 'thumb),
                            :alt (:title p)}]]])
                 (:photos c))]
@@ -130,16 +133,16 @@
 
 (defn photo-view [c p]
   (layout [:h2
-           [:a {:href (collections-url c)}
+           [:a {:href (collection-url c)}
             (h (:name c))]]
           [:div.photo
            (if *admin*
              [:div
-              (photo-update-form c p)
-              (photo-remove-form c p)]
+              (photo-update-form p)
+              (photo-remove-form p)]
              [:h3
               (h (:title p))])
-           [:a {:href (collections-url c)}
+           [:a {:href (collection-url c)}
             [:img {:src (image-url p 'preview)
                    :alt (:title p)}]]]))
 
@@ -184,12 +187,12 @@
   (GET "/collections" []
        (index-view))
   
-  (GET "/collections/:slug" [slug]
+  (GET "/collection/:slug" [slug]
        (collection-view (data/collection-by-slug slug)))
   
-  (GET "/collections/:c-slug/:p-slug" [c-slug p-slug]
-       (let [c (data/collection-by-slug c-slug)
-             p (data/photo-by-slug p-slug)]
+  (GET "/photo/:slug" [slug]
+       (let [p (data/photo-by-slug slug)
+             c (data/collection-by-photo p)]
          (photo-view c p)))
   
   (GET "/image/:slug/:size.jpg" [slug size]
@@ -199,34 +202,33 @@
   (POST "/admin/collections" [name]
         (with-admin
           (data/collections-create name)
-          (redirect (collections-url))))
+          (redirect (collection-url))))
   
-  (POST "/admin/collections/:slug" [slug name]
+  (POST "/admin/collection/:slug" [slug name]
         (with-admin
           (let [c (data/collection-by-slug slug)]
             (data/collections-update c {:name name})
-            (redirect (collections-url c)))))
+            (redirect (collection-url c)))))
   
-  (POST "/admin/collections/:slug/add" [slug photo title]
+  (POST "/admin/collection/:slug/add" [slug photo title]
         (with-admin
           (let [c (data/collection-by-slug slug)]
             (when (> (:size photo) 0)
               (data/photo-add c (merge {:title title} photo)))
-            (redirect (collections-url c)))))
+            (redirect (collection-url c)))))
 
-  (POST "/admin/collections/:c-slug/:p-slug" [c-slug p-slug title]
+  (POST "/admin/photo/:slug" [slug title]
         (with-admin
-          (let [c (data/collection-by-slug c-slug)
-                p (data/photo-by-slug p-slug)]
-            (data/photo-update c p {:title title})
-            (redirect (photo-url c p)))))
+          (let [p (data/photo-by-slug slug)]
+            (data/photo-update p {:title title})
+            (redirect (photo-url p)))))
 
-  (POST "/admin/collections/:c-slug/:p-slug/remove" [c-slug p-slug]
+  (POST "/admin/photo/:slug/remove" [slug]
         (with-admin
-          (let [c (data/collection-by-slug c-slug)
-                p (data/photo-by-slug p-slug)]
-            (data/photo-remove c p)
-            (redirect (collections-url c))))))
+          (let [p (data/photo-by-slug slug)
+                c (data/collection-by-photo p)]
+            (data/photo-remove p)
+            (redirect (collection-url c))))))
 
 (defroutes app frontend admin
   (ANY "/*" [] (redirect "/")))
