@@ -202,7 +202,7 @@
   (POST "/admin/collections" [name]
         (with-admin
           (data/collections-create name)
-          (redirect (collection-url))))
+          (redirect (collections-url))))
   
   (POST "/admin/collection/:slug" [slug name]
         (with-admin
