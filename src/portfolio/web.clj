@@ -65,15 +65,15 @@
     [:html
      [:head
       [:title
-       (h *name*)]
+       (h (:name (data/site)))]
       (include-css "/css/screen.css")]
      [:body (when *admin* {:class "admin"})
       [:div.header
-       [:h1 (link-to (collections-url) (h *name*))]]
+       [:h1 (link-to (collections-url) (h (:name (data/site))))]]
       [:div.content
        body]
       [:div.footer
-       (h *copyright*)]]])})
+       (h (:copyright (data/site)))]]])})
 
 (defn collection-create-form
   ([c] (form-to [:POST (collections-url)]
@@ -114,7 +114,7 @@
              [:li
               (collection-create-form)])]
           [:div.address
-           (interpose [:br] *address*)]))
+           (interpose [:br] (:address (data/site)))]))
 
 (defn collection-view [c]
   (layout (if *admin*
@@ -208,13 +208,13 @@
 (defroutes admin
   (POST "/admin/collections" [name]
         (with-admin
-          (data/collections-create name)
+          (data/collection-create name)
           (redirect (collections-url))))
   
   (POST "/admin/collection/:slug" [slug name]
         (with-admin
           (let [c (data/collection-by-slug slug)]
-            (data/collections-update c {:name name})
+            (data/collection-update c {:name name})
             (redirect (collection-url c)))))
   
   (POST "/admin/collection/:slug/add" [slug photo title]

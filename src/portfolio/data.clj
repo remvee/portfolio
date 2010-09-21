@@ -3,20 +3,14 @@
         [clojure.contrib.io :as io :only [copy file]]))
 
 ;; fixtures
-(def *name* "Ruben Eshuis Photography")
-(def *copyright* "Copyright all images Ruben Eshuis Photography")
-(def *address* ["cel: +31 (0)6-16476240"
-                "fax: +31 (0)20-4286008"
-                "mail: <a href='mailto:r.e.eshuis@chello.nl'>r.e.eshuis@chello.nl</a>"
-                "www: <a href='http://www.rubeneshuis.com'>www.rubeneshuis.com</a>"])
+(def *data-dir* (or (get (System/getenv) "APP_DATA") "/tmp"))
+(def *data-file* (str *data-dir* "/portfolio.sexp"))
 
 ;; state
-(declare *collections*)
-(def *data-file* "/tmp/portfolio.sexp")
-(defn- store! [] (spit *data-file* (pr-str (deref *collections*))))
-(defn- read! [] (if (.canRead (io/file *data-file*)) (read-string (slurp *data-file*)) []))
-
-(def *collections* (ref (read!)))
+(declare *site*)
+(defn- store! [] (spit *data-file* (pr-str (deref *site*))))
+(defn- read! [] (if (.canRead (io/file *data-file*)) (read-string (slurp *data-file*)) {}))
+(def *site* (ref (read!)))
 
 ;; helpers
 (defn name->slug [name]
@@ -24,8 +18,12 @@
            (re-gsub #"[^a-z0-9_-]" "-" name)))
 
 ;; models
+(defn site
+  ([] (deref *site*))
+  ([k] (get (site) k)))
+
 (defn collections
-  ([] (deref *collections*))
+  ([] (site :collections))
   ([where]
      (filter (fn [c]
                (reduce (fn [m k]
@@ -39,19 +37,22 @@
 (defn collection-by-slug [slug]
   (first (collections {:slug slug})))
 
-(defn collections-create [name]
-  (dosync (commute *collections*
-                   conj
-                   {:name name
-                    :slug (name->slug name)}))
+(defn collection-create [name]
+  (dosync (commute *site*
+                   assoc
+                   :collections
+                   (vec (conj (collections)
+                              {:name name
+                               :slug (name->slug name)}))))
   (store!))
 
-(defn collections-update [collection attrs]
+(defn collection-update [collection attrs]
   (let [new (merge collection attrs)]
-    (dosync (commute *collections*
-                     (fn [coll]
-                       (replace {collection new}
-                                coll))))
+    (dosync (commute *site*
+                     assoc
+                     :collections
+                     (vec (replace {collection new}
+                                   (collections)))))
     (store!)
     new))
 
@@ -61,10 +62,10 @@
 
 (defn photo-by-slug [slug]
   (first (filter #(= slug (str (:slug %)))
-                 (flatten (map :photos @*collections*)))))
+                 (flatten (map :photos (collections))))))
 
 (defn photo-file [photo]
-  (str "/tmp/photo-" (:slug photo)))
+  (str *data-dir* "/photo-" (:slug photo)))
   
 (defn photo-add [collection attrs]
   (let [photo {:slug (name->slug (:filename attrs))
@@ -72,11 +73,7 @@
         new (assoc collection :photos (conj (or (:photos collection) [])
                                             photo))]
     (io/copy (:tempfile attrs) (io/file (photo-file photo)))
-    (dosync (commute *collections*
-                     (fn [coll]
-                       (replace {collection new}
-                                coll))))
-    (store!)))
+    (collection-update collection new)))
 
 (defn photo-remove [photo]
   (let [collection (collection-by-photo photo)
@@ -84,20 +81,13 @@
                                                           (:slug %))
                                                    (:photos collection))))]
     (when photo
-      (dosync (commute *collections*
-                       (fn [coll]
-                         (replace {collection new}
-                                  coll))))
-      (store!)
+      (collection-update collection new)
       (io/delete-file (photo-file photo)))))
 
 (defn photo-update [photo attrs]
   (let [collection (collection-by-photo photo)
         new (assoc collection :photos (replace {photo (merge photo attrs)}
                                                (:photos collection)))]
-    (dosync (commute *collections*
-                     (fn [coll]
-                       (replace {collection new}
-                                coll))))
+    (collection-update collection new)
     (store!)))
  
