@@ -42,6 +42,12 @@ form {
     margin: 1em;
     clear: both;
 }
+.field-with-error input {
+    background: #fee;
+}
+.error-message {
+    color: red;
+}
 div.header, div.address, div.footer {
     margin: auto;
     width: 250px;

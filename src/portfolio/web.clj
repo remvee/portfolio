@@ -87,19 +87,21 @@
   (form-to [:POST (photo-remove-url p)]
            (submit-button "remove")))
   
-(defn index-view []
-  (layout [:ul
-           (map (fn [c]
-                  [:li
-                   [:h2
-                    [:a {:href (collection-url c)}
-                     (h (:name c))]]])
-                (collections))
-           (when *admin*
-             [:li
-              (collection-create-form)])]
-          [:div.address
-           (interpose [:br] (:address (data/site)))]))
+(defn collections-view
+  ([c]
+     (layout [:ul
+              (map (fn [c]
+                     [:li
+                      [:h2
+                       [:a {:href (collection-url c)}
+                        (h (:name c))]]])
+                   (collections))
+              (when *admin*
+                [:li
+                 (collection-create-form c)])]
+             [:div.address
+              (interpose [:br] (:address (data/site)))]))
+  ([] (collections-view nil)))
 
 (defn collection-view [c]
   (layout (if *admin*
@@ -179,7 +181,7 @@
 
 (defroutes-with-admin frontend
   (GET "/collections" []
-       (index-view))
+       (collections-view))
   
   (GET "/collection/:slug" [slug]
        (collection-view (data/collection-by-slug slug)))
@@ -195,14 +197,18 @@
 (defroutes admin
   (POST "/admin/collections" [name]
         (with-admin
-          (data/collection-create name)
-          (redirect (collections-url))))
+          (let [c (data/collection-create name)]
+            (if (:errors c)
+              (collections-view c)
+              (redirect (collections-url))))))
   
   (POST "/admin/collection/:slug" [slug name]
         (with-admin
-          (let [c (data/collection-by-slug slug)]
-            (data/collection-update c {:name name})
-            (redirect (collection-url c)))))
+          (let [c (data/collection-update (data/collection-by-slug slug)
+                                          {:name name})]
+            (if (:errors c)
+              (collection-view c)
+              (redirect (collection-url c))))))
   
   (POST "/admin/collection/:slug/remove" [slug]
         (with-admin

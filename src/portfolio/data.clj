@@ -1,6 +1,7 @@
 (ns portfolio.data
-  (:use [clojure.contrib.str-utils]
-        [clojure.contrib.io :as io :only [copy file]]))
+  (:use [clojure.test]
+        [clojure.contrib.str-utils]
+        [clojure.java.io :as io :only [copy file]]))
 
 ;; fixtures
 (def *data-dir* (or (get (System/getenv) "APP_DATA") "/tmp"))
@@ -16,6 +17,28 @@
 (defn name->slug [name]
   (re-gsub #"-+" "-"
            (re-gsub #"[^a-z0-9_-]" "-" name)))
+
+(defn errors
+  "Collect errors in attrs map."
+  {:test #(do
+            (is (= {:email "may not be blank"}
+                   (errors {:name "test"} {:not-blank '(name email)})))
+            (is (= {:email "may not be blank" :name "may not be blank"}
+                   (errors {} {:not-blank '(name email)})))
+            (is (= {:name "may not be blank", :count "not a number"}
+                   (errors {:name "", :count "42"} {:not-blank '(name), :numeric '(count)})))
+            (is (empty?
+                 (errors {:name "test", :count 42} {:not-blank '(name), :numeric '(count)}))))}
+  [attrs {not-blank :not-blank numeric :numeric}]
+  (reduce merge
+          (concat
+           (map #(when (or (= "" (get attrs %))
+                           (nil? (get attrs %)))
+                   {% "may not be blank"})
+                not-blank)
+           (map #(when (not (number? (get attrs %)))
+                   {% "not a number"})
+                numeric))))
 
 ;; models
 (defn site
@@ -37,26 +60,33 @@
 (defn collection-by-slug [slug]
   (first (collections {:slug slug})))
 
+(defn collection-validate [c]
+  (merge c {:errors (errors c {:not-blank [:name]})}))
+  
 (defn collection-create [name]
-  (dosync (commute *site*
-                   assoc
-                   :collections
-                   (vec (conj (collections)
-                              {:name name
-                               :slug (name->slug name)}))))
-  (store!))
+  (let [c (collection-validate {:name name
+                                :slug (name->slug name)})]
+    (when-not (:errors c)
+      (dosync (commute *site*
+                       assoc
+                       :collections
+                       (vec (conj (collections) c))))
+      (store!))
+    c))
 
 (defn collection-update [collection attrs]
-  (let [new (merge collection attrs)]
-    (dosync (commute *site*
-                     assoc
-                     :collections
-                     (vec (replace {collection new}
-                                   (collections)))))
-    (store!)
-    new))
+  (let [c (collection-validate (merge collection attrs))]
+    (when-not (:errors c)
+      (dosync (commute *site*
+                       assoc
+                       :collections
+                       (vec (replace {collection c}
+                                     (collections)))))
+      (store!))
+    c))
 
 (declare photo-remove)
+
 (defn collection-remove [collection]
   (doseq [p (:photos collection)]
     (photo-remove p))
