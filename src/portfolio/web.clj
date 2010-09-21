@@ -1,6 +1,6 @@
 (ns portfolio.web (:use [portfolio.images :as images]
                         [portfolio.data   :as data]
-                        [portfolio.util   :as util]
+                        [portfolio.util]
                         [hiccup.core]
                         [hiccup.page-helpers]
                         [hiccup.form-helpers]
@@ -21,6 +21,9 @@
 (defn collection-url [c]
   (str (if *admin* "/admin/collection" "/collection") "/" (:slug c)))
 
+(defn collection-remove-url [c]
+  (str (collection-url c) "/remove"))
+       
 (defn photo-url [p]
   (str (if *admin* "/admin/photo" "/photo")
        "/" (:slug p)))
@@ -33,28 +36,6 @@
 
 (defn image-url [p size]
   (str "/image/" (:slug p) "/" size ".jpg"))
-
-;; helpers
-(def uniq-id-counter (ThreadLocal.))
-
-(defn uniq-id [key]
-  (let [current (or (.get uniq-id-counter) {})
-        registered (assoc current key (inc (get current key 0)))]
-    (.set uniq-id-counter registered)
-    (str (name key) "-" (get registered key))))
-
-(defn form-field
-  ([attr fields text]
-     (form-field attr fields text text-field))
-  ([attr fields text f]
-     (let [id    (uniq-id attr)
-           error (when (:errors fields) (attr (:errors fields)))]
-       [:div {:class (str "field" (when error " field-with-error"))}
-        [:label {:for id} text]
-        (if (= f file-upload)
-          (f {:id id} attr)
-          (f {:id id} attr (attr fields)))
-        [:span {:class "error-message"} error]])))
 
 ;; views
 (defn layout [& body]
@@ -85,6 +66,10 @@
   (form-to [:POST (collection-url c)]
            (form-field :name c "name")
            (submit-button "update")))
+
+(defn collection-remove-form [c]
+  (form-to [:POST (collection-remove-url c)]
+           (submit-button "remove")))
 
 (defn photo-update-form [p]
   (form-to [:POST (photo-url p)]
@@ -118,7 +103,9 @@
 
 (defn collection-view [c]
   (layout (if *admin*
-            (collection-update-form c)
+            [:div.admin
+             (collection-update-form c)
+             (collection-remove-form c)]
             [:h2
              [:a {:href (collection-url c)}
               (h (:name c))]])
@@ -216,6 +203,12 @@
           (let [c (data/collection-by-slug slug)]
             (data/collection-update c {:name name})
             (redirect (collection-url c)))))
+  
+  (POST "/admin/collection/:slug/remove" [slug]
+        (with-admin
+          (let [c (data/collection-by-slug slug)]
+            (data/collection-remove c)
+            (redirect (collections-url)))))
   
   (POST "/admin/collection/:slug/add" [slug photo title]
         (with-admin

@@ -56,6 +56,18 @@
     (store!)
     new))
 
+(declare photo-remove)
+(defn collection-remove [collection]
+  (doseq [p (:photos collection)]
+    (photo-remove p))
+  (dosync (commute *site*
+                   assoc
+                   :collections
+                   (vec (remove #(= (:slug collection)
+                                    (:slug %))
+                                (collections)))))
+  (store!))
+
 (defn collection-by-photo [photo]
   (first (filter #(some (partial = photo) (:photos %))
                  (collections))))
