@@ -60,11 +60,18 @@
 (defn collection-by-slug [slug]
   (first (collections {:slug slug})))
 
-(defn collection-validate [c]
-  (merge c {:errors (errors c {:not-blank [:name]})}))
+(defn collection-validate [before after]
+  (merge-with merge
+              after
+              {:errors (errors after {:not-blank [:name]})}
+              (if (some #(= (:name after) (:name %))
+                        (remove (partial = before) (collections)))
+                {:errors {:name "already taken"}}
+                nil)))
   
 (defn collection-create [name]
-  (let [c (collection-validate {:name name
+  (let [c (collection-validate nil
+                               {:name name
                                 :slug (name->slug name)})]
     (when-not (:errors c)
       (dosync (commute *site*
@@ -75,7 +82,8 @@
     c))
 
 (defn collection-update [collection attrs]
-  (let [c (collection-validate (merge collection attrs))]
+  (let [c (collection-validate collection
+                               (merge collection attrs))]
     (when-not (:errors c)
       (dosync (commute *site*
                        assoc
