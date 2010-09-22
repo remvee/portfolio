@@ -22,7 +22,7 @@
 ;; helpers
 (defn name->slug [name]
   (re-gsub #"-+" "-"
-           (re-gsub #"[^a-z0-9_-]" "-" name)))
+           (re-gsub #"[^a-z0-9_-]" "-" (or name ""))))
 
 (defn errors
   "Collect errors in attrs map."
@@ -118,6 +118,11 @@
   (first (filter #(some (partial = photo) (:photos %))
                  (collections))))
 
+(defn photo-validate [before after]
+  (merge-with merge
+              after
+              {:errors (errors after {:not-blank [:title]})}))
+
 (defn photo-by-slug [slug]
   (first (filter #(= slug (str (:slug %)))
                  (flatten (map :photos (collections))))))
@@ -125,13 +130,20 @@
 (defn photo-file [photo]
   (str *data-dir* "/photo-" (:slug photo)))
   
-(defn photo-add [collection attrs]
-  (let [photo {:slug (name->slug (:filename attrs))
-               :title (:title attrs)}
-        new (assoc collection :photos (conj (or (:photos collection) [])
-                                            photo))]
-    (io/copy (:tempfile attrs) (io/file (photo-file photo)))
-    (collection-update collection new)))
+(defn photo-add [collection attrs data] ; TODO title needs to be uniq in collection
+  (let [slug (str (:slug collection) "-" (name->slug (:title attrs)))
+        photo (merge-with merge
+                          (photo-validate nil (assoc attrs :slug slug))
+                          (if (not (> (:size data) 0))
+                            {:errors {:data "may not be blank"}}
+                            nil))]
+    (when-not (:errors photo)
+      (let [new (assoc collection :photos (conj (or (:photos collection)
+                                                    [])
+                                                (dissoc photo :errors)))]
+        (io/copy (:tempfile data) (io/file (photo-file photo)))
+        (collection-update collection new)))
+    photo))
 
 (defn photo-remove [photo]
   (let [collection (collection-by-photo photo)

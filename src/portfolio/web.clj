@@ -76,11 +76,11 @@
            (form-field :title p "title")
            (submit-button "update")))
 
-(defn photo-add-form [c]
+(defn photo-add-form [c p]
   (form-to {:enctype "multipart/form-data"}
            [:POST (photo-add-url c)]
-           (form-field :title c "title")
-           (form-field :photo c "photo" file-upload)
+           (form-field :title p "title")
+           (form-field :data p "photo" file-upload)
            (submit-button "upload")))
 
 (defn photo-remove-form [p]
@@ -103,23 +103,25 @@
               (interpose [:br] (:address (data/site)))]))
   ([] (collections-view nil)))
 
-(defn collection-view [c]
-  (layout (if *admin*
-            [:div.admin
-             (collection-update-form c)
-             (collection-remove-form c)]
-            [:h2
-             [:a {:href (collection-url c)}
-              (h (:name c))]])
-          [:ul.thumbs
-           (map (fn [p]
-                  [:li.thumb
-                   [:a {:href (photo-url p)}
-                    [:img {:src (image-url p 'thumb),
-                           :alt (:title p)}]]])
-                (:photos c))]
-          (when *admin*
-            (photo-add-form c))))
+(defn collection-view
+  ([c p]
+     (layout (if *admin*
+               [:div.admin
+                (collection-update-form c)
+                (collection-remove-form c)]
+               [:h2
+                [:a {:href (collection-url c)}
+                 (h (:name c))]])
+             [:ul.thumbs
+              (map (fn [p]
+                     [:li.thumb
+                      [:a {:href (photo-url p)}
+                       [:img {:src (image-url p 'thumb),
+                              :alt (:title p)}]]])
+                   (:photos c))]
+             (when *admin*
+               (photo-add-form c p))))
+  ([c] (collection-view c nil)))
 
 (defn photo-view [c p]
   (layout [:h2
@@ -216,12 +218,13 @@
             (data/collection-remove c)
             (redirect (collections-url)))))
   
-  (POST "/admin/collection/:slug/add" [slug photo title]
+  (POST "/admin/collection/:slug/add" [slug data title]
         (with-admin
-          (let [c (data/collection-by-slug slug)]
-            (when (> (:size photo) 0)
-              (data/photo-add c (merge {:title title} photo)))
-            (redirect (collection-url c)))))
+          (let [c (data/collection-by-slug slug)
+                p (data/photo-add c {:title title} data)]
+            (if (:errors p)
+              (collection-view c p)
+              (redirect (collection-url c))))))
 
   (POST "/admin/photo/:slug" [slug title]
         (with-admin
