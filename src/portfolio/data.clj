@@ -6,11 +6,17 @@
 ;; fixtures
 (def *data-dir* (or (get (System/getenv) "APP_DATA") "/tmp"))
 (def *data-file* (str *data-dir* "/portfolio.sexp"))
-
+(def *default-site* {:name "Acme Photography"
+                     :copyright "Acme Corp. Inc. Limited."
+                     :address ["Acme Headquarter"
+                               "Somewhere"
+                               "In the world"]})
 ;; state
 (declare *site*)
+
 (defn- store! [] (spit *data-file* (pr-str (deref *site*))))
-(defn- read! [] (if (.canRead (io/file *data-file*)) (read-string (slurp *data-file*)) {}))
+(defn- read! [] (if (.canRead (io/file *data-file*)) (read-string (slurp *data-file*)) *default-site*))
+
 (def *site* (ref (read!)))
 
 ;; helpers
