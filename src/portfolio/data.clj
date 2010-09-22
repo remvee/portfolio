@@ -28,13 +28,13 @@
   "Collect errors in attrs map."
   {:test #(do
             (is (= {:email "may not be blank"}
-                   (errors {:name "test"} {:not-blank '(name email)})))
+                   (errors {:name "test"} {:not-blank [:name :email]})))
             (is (= {:email "may not be blank" :name "may not be blank"}
-                   (errors {} {:not-blank '(name email)})))
+                   (errors {} {:not-blank [:name :email]})))
             (is (= {:name "may not be blank", :count "not a number"}
-                   (errors {:name "", :count "42"} {:not-blank '(name), :numeric '(count)})))
+                   (errors {:name "", :count "42"} {:not-blank [:name], :numeric [:count]})))
             (is (empty?
-                 (errors {:name "test", :count 42} {:not-blank '(name), :numeric '(count)}))))}
+                 (errors {:name "test", :count 42} {:not-blank [:name], :numeric [:count]}))))}
   [attrs {not-blank :not-blank numeric :numeric}]
   (reduce merge
           (concat
