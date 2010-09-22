@@ -75,7 +75,7 @@
                 {:errors {:name "already taken"}}
                 nil)))
   
-(defn collection-create [name]
+(defn collection-add [name]
   (let [c (collection-validate nil
                                {:name name
                                 :slug (name->slug name)})]

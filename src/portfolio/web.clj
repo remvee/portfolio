@@ -56,11 +56,11 @@
       [:div.footer
        (h (:copyright (data/site)))]]])})
 
-(defn collection-create-form
+(defn collection-add-form
   ([c] (form-to [:POST (collections-url)]
                 (form-field :name c "name")
                 (submit-button "add")))
-  ([] (collection-create-form nil)))
+  ([] (collection-add-form nil)))
 
 (defn collection-update-form [c]
   (form-to [:POST (collection-url c)]
@@ -98,7 +98,7 @@
                    (collections))
               (when *admin*
                 [:li
-                 (collection-create-form c)])]
+                 (collection-add-form c)])]
              [:div.address
               (interpose [:br] (:address (data/site)))]))
   ([] (collections-view nil)))
@@ -197,7 +197,7 @@
 (defroutes admin
   (POST "/admin/collections" [name]
         (with-admin
-          (let [c (data/collection-create name)]
+          (let [c (data/collection-add name)]
             (if (:errors c)
               (collections-view c)
               (redirect (collections-url))))))
