@@ -77,7 +77,8 @@
       (dosync (commute *site*
                        assoc
                        :collections
-                       (vec (conj (collections) c))))
+                       (vec (conj (collections)
+                                  (dissoc c :errors)))))
       (store!))
     c))
 
@@ -88,7 +89,8 @@
       (dosync (commute *site*
                        assoc
                        :collections
-                       (vec (replace {collection c}
+                       (vec (replace {collection
+                                      (dissoc c :errors)}
                                      (collections)))))
       (store!))
     c))
