@@ -20,9 +20,18 @@
 (def *site* (ref (read!)))
 
 ;; helpers
-(defn name->slug [name]
-  (re-gsub #"-+" "-"
-           (re-gsub #"[^a-z0-9_-]" "-" (or name ""))))
+(defn name->slug
+  {:test #(do
+            (is (= "name-alt" (name->slug "name" ["name"])))
+            (is (= "name-alt-alt" (name->slug "name" ["name" "name-alt"]))))}
+  ([name]
+     (re-gsub #"-+" "-"
+              (re-gsub #"[^a-z0-9_-]" "-" (or name ""))))
+  ([name existing]
+     (let [candidate (name->slug name)]
+       (if (some (partial = candidate) existing)
+         (recur (str candidate "-alt") existing)
+         candidate))))
 
 (defn errors
   "Collect errors in attrs map."
@@ -130,8 +139,12 @@
 (defn photo-file [photo]
   (str *data-dir* "/photo-" (:slug photo)))
   
-(defn photo-add [collection attrs data] ; TODO title needs to be uniq in collection
-  (let [slug (str (:slug collection) "-" (name->slug (:title attrs)))
+(defn photo-add [collection attrs data]
+  (prn (map :slug (:photos collection)))
+  (let [slug (name->slug (str (:slug collection)
+                              "-"
+                              (:title attrs))
+                         (map :slug (:photos collection)))
         photo (merge-with merge
                           (photo-validate nil (assoc attrs :slug slug))
                           (if (not (> (:size data) 0))
