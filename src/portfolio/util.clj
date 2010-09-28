@@ -16,6 +16,11 @@
    [:ul
     (map #(html [:li (htmlify %)]) value)]))
 
+(defmethod htmlify java.lang.String [value]
+  (html
+   [:pre
+    (h (str "\"" value "\""))]))
+
 (defmethod htmlify java.lang.Object [value]
   (html
    [:pre
