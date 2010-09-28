@@ -10,7 +10,9 @@
                      :copyright "Acme Corp. Inc. Limited."
                      :address ["Acme Headquarter"
                                "Somewhere"
-                               "In the world"]})
+                               "In the world"]
+                     :username "t"
+                     :password "t"})
 ;; state
 (declare *site*)
 

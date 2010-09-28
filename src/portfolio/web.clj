@@ -9,7 +9,8 @@
                         [ring.middleware.stacktrace       :only [wrap-stacktrace]]
                         [ring.middleware.file             :only [wrap-file]]
                         [ring.middleware.file-info        :only [wrap-file-info]]
-                        [ring.middleware.multipart-params :only [wrap-multipart-params]]))
+                        [ring.middleware.multipart-params :only [wrap-multipart-params]]
+                        [remvee.ring.middleware.basic-authentication]))
 
 ;; state
 (def *admin* false)
@@ -242,7 +243,12 @@
 (defroutes app frontend admin
   (ANY "/*" [] (redirect "/")))
 
+(defn authenticated? [u p] (and (= u (data/site :username))
+                                (= p (data/site :password))))
+(defn restricted? [req] (re-matches #"/admin/.*" (:uri req)))
+
 (wrap! app
+       (:basic-authentication "restricted area" authenticated? restricted?)
        :stacktrace ; TODO remove me
        :multipart-params
        (:file "public")
