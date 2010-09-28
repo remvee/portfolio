@@ -247,6 +247,15 @@
                                 (= p (data/site :password))))
 (defn restricted? [req] (re-matches #"/admin/.*" (:uri req)))
 
+(defn wrap-force-ssl [app]
+  (fn [req]
+    (if (= :https (:scheme req))
+      (app req)
+      (let [url (str "https://" (:server-name req) (:uri req))]
+        {:status  302
+         :headers {"Location" url, "Content-Type" "text/html"}
+         :body    (str "<html><body><a href='" url "'>redirecting..</a.></body></html>")}))))
+
 (wrap! app
        (:basic-authentication "restricted area" authenticated? restricted?)
        :stacktrace ; TODO remove me
