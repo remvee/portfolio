@@ -168,21 +168,7 @@
                }))
   
 ;; controllers
-(defmacro with-admin [& form]
-  `(binding [*admin* true]
-     ~@form))
-
-(defmacro defroutes-with-admin [name & routes]
-  (list* 'defroutes name
-         (mapcat (fn [route]
-                   (list route
-                         `(~(first route)
-                           ~(str "/admin" (second route))
-                           ~(nth route 2)
-                           (with-admin ~@(drop 3 route)))))
-                 routes)))
-
-(defroutes-with-admin frontend
+(defroutes public-routes
   (GET "/collections" []
        (collections-view))
   
@@ -197,67 +183,61 @@
   (GET "/image/:slug/:size.jpg" [slug size]
        (image-response (data/photo-by-slug slug) size)))
 
-(defroutes admin
-  (POST "/admin/collections" [name]
-        (with-admin
-          (let [c (data/collection-add name)]
-            (if (:errors c)
-              (collections-view c)
-              (redirect (collections-url))))))
-  
-  (POST "/admin/collection/:slug" [slug name]
-        (with-admin
-          (let [c (data/collection-update (data/collection-by-slug slug)
-                                          {:name name})]
-            (if (:errors c)
-              (collection-view c)
-              (redirect (collection-url c))))))
-  
-  (POST "/admin/collection/:slug/remove" [slug]
-        (with-admin
-          (let [c (data/collection-by-slug slug)]
-            (data/collection-remove c)
+(defroutes private-routes
+  (POST "/collections" [name]
+        (let [c (data/collection-add name)]
+          (if (:errors c)
+            (collections-view c)
             (redirect (collections-url)))))
   
-  (POST "/admin/collection/:slug/add" [slug data title]
-        (with-admin
-          (let [c (data/collection-by-slug slug)
-                p (data/photo-add c {:title title} data)]
-            (if (:errors p)
-              (collection-view c p)
-              (redirect (collection-url c))))))
+  (POST "/collection/:slug" [slug name]
+        (let [c (data/collection-update (data/collection-by-slug slug)
+                                        {:name name})]
+          (if (:errors c)
+            (collection-view c)
+            (redirect (collection-url c)))))
+  
+  (POST "/collection/:slug/remove" [slug]
+        (let [c (data/collection-by-slug slug)]
+          (data/collection-remove c)
+          (redirect (collections-url))))
+  
+  (POST "/collection/:slug/add" [slug data title]
+        (let [c (data/collection-by-slug slug)
+              p (data/photo-add c {:title title} data)]
+          (if (:errors p)
+            (collection-view c p)
+            (redirect (collection-url c)))))
 
-  (POST "/admin/photo/:slug" [slug title]
-        (with-admin
-          (let [p (data/photo-by-slug slug)]
-            (data/photo-update p {:title title})
-            (redirect (photo-url p)))))
+  (POST "/photo/:slug" [slug title]
+        (let [p (data/photo-by-slug slug)]
+          (data/photo-update p {:title title})
+          (redirect (photo-url p))))
 
-  (POST "/admin/photo/:slug/remove" [slug]
-        (with-admin
-          (let [p (data/photo-by-slug slug)
-                c (data/collection-by-photo p)]
-            (data/photo-remove p)
-            (redirect (collection-url c))))))
-
-(defroutes app frontend admin
-  (ANY "/*" [] (redirect "/")))
+  (POST "/photo/:slug/remove" [slug]
+        (let [p (data/photo-by-slug slug)
+              c (data/collection-by-photo p)]
+          (data/photo-remove p)
+          (redirect (collection-url c)))))
 
 (defn authenticated? [u p] (and (= u (data/site :username))
                                 (= p (data/site :password))))
-(defn restricted? [req] (re-matches #"/admin/.*" (:uri req)))
 
-(defn wrap-force-ssl [app]
-  (fn [req]
-    (if (= :https (:scheme req))
-      (app req)
-      (let [url (str "https://" (:server-name req) (:uri req))]
-        {:status  302
-         :headers {"Location" url, "Content-Type" "text/html"}
-         :body    (str "<html><body><a href='" url "'>redirecting..</a.></body></html>")}))))
+(defn wrap-admin [app]
+  (ANY "/admin/*" {{path "*"} :params}
+       (wrap-basic-authentication
+        (fn [req]
+          (binding [*admin* true]
+            (app (assoc req :uri (str "/" path)))))
+        "restricted area"
+        authenticated?)))
+
+(defroutes app
+  public-routes
+  (wrap-admin public-routes)
+  (wrap-admin private-routes))
 
 (wrap! app
-       (:basic-authentication "restricted area" authenticated? restricted?)
        :stacktrace ; TODO remove me
        :multipart-params
        (:file "public")
