@@ -1,6 +1,10 @@
 (do
   (require 'portfolio)
-  (require 'ring.adapter.jetty)
+  (use 'ring.adapter.jetty
+       'compojure.core
+       'ring.middleware.stacktrace
+       'portfolio.web)
+  (wrap! app :stacktrace)
   (future
-    (ring.adapter.jetty/run-jetty (var portfolio.web/app) {:port 8080})))
+    (run-jetty (var app) {:port 8080})))
 

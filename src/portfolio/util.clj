@@ -50,3 +50,20 @@
           (f {:id id} attr)
           (f {:id id} attr (attr fields)))
         [:span {:class "error-message"} error]])))
+
+;; wrappers
+(defn wrap-force-ssl
+  "Wrap response to ensure requests are protected by SSL."
+  ([app change-schema-fn]
+     (fn [req]
+       (if (= :https (:scheme req))
+         (app req)
+         (let [url (change-schema-fn req)]
+           {:status  302
+            :headers {"Location"     url
+                      "Content-Type" "text/html"}
+            :body    (str "<a href='" url "'>&rarr;</a.>")}))))
+  ([app]
+     (wrap-force-ssl app #(str "https://"
+                               (:server-name %)
+                               (:uri %)))))

@@ -220,8 +220,9 @@
           (data/photo-remove p)
           (redirect (collection-url c)))))
 
-(defn authenticated? [u p] (and (= u (data/site :username))
-                                (= p (data/site :password))))
+(defn authenticated? [u p]
+  (and (= u (data/site :username))
+       (= p (data/site :password))))
 
 (defn wrap-admin [app]
   (ANY "/admin/*" {{path "*"} :params}
@@ -232,13 +233,14 @@
         "restricted area"
         authenticated?)))
 
-(defroutes app
-  public-routes
+(defroutes admin
   (wrap-admin public-routes)
   (wrap-admin private-routes))
 
+(defroutes app
+  public-routes (var admin))
+
 (wrap! app
-       :stacktrace ; TODO remove me
        :multipart-params
        (:file "public")
        :file-info)
