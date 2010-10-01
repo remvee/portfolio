@@ -186,14 +186,14 @@
 (defroutes private-routes
   (POST "/collections" [name]
         (let [c (data/collection-add name)]
-          (if (:errors c)
+          (if (:errors (meta c))
             (collections-view c)
             (redirect (collections-url)))))
   
   (POST "/collection/:slug" [slug name]
         (let [c (data/collection-update (data/collection-by-slug slug)
                                         {:name name})]
-          (if (:errors c)
+          (if (:errors (meta c))
             (collection-view c)
             (redirect (collection-url c)))))
   
@@ -205,7 +205,7 @@
   (POST "/collection/:slug/add" [slug data title]
         (let [c (data/collection-by-slug slug)
               p (data/photo-add c {:title title} data)]
-          (if (:errors p)
+          (if (:errors (meta p))
             (collection-view c p)
             (redirect (collection-url c)))))
 
@@ -230,7 +230,6 @@
         (fn [req]
           (binding [*admin* true]
             (app (assoc req :uri (str "/" path)))))
-        "restricted area"
         authenticated?)))
 
 (defroutes admin

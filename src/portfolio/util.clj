@@ -43,13 +43,14 @@
      (form-field attr fields text text-field))
   ([attr fields text f]
      (let [id    (uniq-id attr)
-           error (when (:errors fields) (attr (:errors fields)))]
-       [:div {:class (str "field" (when error " field-with-error"))}
+           errors (and (:errors (meta fields)) (attr (:errors (meta fields))))]
+       [:div {:class (str "field" (when errors " field-with-error"))}
         [:label {:for id} text]
         (if (= f file-upload)
           (f {:id id} attr)
           (f {:id id} attr (attr fields)))
-        [:span {:class "error-message"} error]])))
+        (when errors
+          [:span {:class "error-message"} (map name errors)])])))
 
 ;; wrappers
 (defn wrap-force-ssl

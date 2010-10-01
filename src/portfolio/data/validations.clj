@@ -17,12 +17,12 @@
                                         (:errors (meta map))
                                         errors)})))
 
-(defn- terminator [before after] [before after])
+(defn terminator [before after] [before after])
 
 (defmacro validator [& validators]
   `(fn [before# after#] (last ((-> terminator ~@validators) before# after#))))
 
-(defn- skel [chain attr err pred & args]
+(defn skel [chain attr err pred & args]
   (fn [before after]
     (chain before (if (apply pred before after args)
                     (merge-errors after {attr [err]})

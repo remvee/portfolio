@@ -1,7 +1,8 @@
 (ns portfolio.data
   (:use [clojure.test]
         [clojure.contrib.str-utils]
-        [clojure.java.io :as io :only [copy file]]))
+        [clojure.java.io :as io :only [copy file]]
+        [portfolio.data.validations :as v]))
 
 ;; fixtures
 (def *data-dir* (or (get (System/getenv) "APP_DATA") "/tmp"))
@@ -35,28 +36,6 @@
          (recur (str candidate "-alt") existing)
          candidate))))
 
-(defn errors
-  "Collect errors in attrs map."
-  {:test #(do
-            (is (= {:email "may not be blank"}
-                   (errors {:name "test"} {:not-blank [:name :email]})))
-            (is (= {:email "may not be blank" :name "may not be blank"}
-                   (errors {} {:not-blank [:name :email]})))
-            (is (= {:name "may not be blank", :count "not a number"}
-                   (errors {:name "", :count "42"} {:not-blank [:name], :numeric [:count]})))
-            (is (empty?
-                 (errors {:name "test", :count 42} {:not-blank [:name], :numeric [:count]}))))}
-  [attrs {not-blank :not-blank numeric :numeric}]
-  (reduce merge
-          (concat
-           (map #(when (or (= "" (get attrs %))
-                           (nil? (get attrs %)))
-                   {% "may not be blank"})
-                not-blank)
-           (map #(when (not (number? (get attrs %)))
-                   {% "not a number"})
-                numeric))))
-
 ;; models
 (defn site
   ([] (deref *site*))
@@ -77,37 +56,31 @@
 (defn collection-by-slug [slug]
   (first (collections {:slug slug})))
 
+(def collection-validator (v/validator (v/not-blank :name)
+                                      (v/unique :name #(collections))))
 (defn collection-validate [before after]
-  (merge-with merge
-              after
-              {:errors (errors after {:not-blank [:name]})}
-              (if (some #(= (:name after) (:name %))
-                        (remove (partial = before) (collections)))
-                {:errors {:name "already taken"}}
-                nil)))
+  (collection-validator before after))
   
 (defn collection-add [name]
   (let [c (collection-validate nil
                                {:name name
                                 :slug (name->slug name)})]
-    (when-not (:errors c)
+    (when-not (:errors (meta c))
       (dosync (commute *site*
                        assoc
                        :collections
-                       (vec (conj (collections)
-                                  (dissoc c :errors)))))
+                       (vec (conj (collections) c))))
       (store!))
     c))
 
 (defn collection-update [collection attrs]
   (let [c (collection-validate collection
                                (merge collection attrs))]
-    (when-not (:errors c)
+    (when-not (:errors (meta c))
       (dosync (commute *site*
                        assoc
                        :collections
-                       (vec (replace {collection
-                                      (dissoc c :errors)}
+                       (vec (replace {collection c}
                                      (collections)))))
       (store!))
     c))
@@ -129,10 +102,16 @@
   (first (filter #(some (partial = photo) (:photos %))
                  (collections))))
 
+(def photo-validator (v/validator (v/not-blank :title) ; TODO allow multiple arguments to v/not-blank
+                                  (v/not-blank :slug)
+                                  (v/skel :data :need-data
+                                          (fn [before after]
+                                            (and (empty? before)
+                                                 (or (empty? (:data after))
+                                                     (= 0 (:size (:data after)))))))))
+
 (defn photo-validate [before after]
-  (merge-with merge
-              after
-              {:errors (errors after {:not-blank [:title]})}))
+  (photo-validator before after))
 
 (defn photo-by-slug [slug]
   (first (filter #(= slug (str (:slug %)))
@@ -142,20 +121,14 @@
   (str *data-dir* "/photo-" (:slug photo)))
   
 (defn photo-add [collection attrs data]
-  (prn (map :slug (:photos collection)))
   (let [slug (name->slug (str (:slug collection)
                               "-"
                               (:title attrs))
                          (map :slug (:photos collection)))
-        photo (merge-with merge
-                          (photo-validate nil (assoc attrs :slug slug))
-                          (if (not (> (:size data) 0))
-                            {:errors {:data "may not be blank"}}
-                            nil))]
-    (when-not (:errors photo)
-      (let [new (assoc collection :photos (conj (or (:photos collection)
-                                                    [])
-                                                (dissoc photo :errors)))]
+        photo (photo-validate nil (assoc attrs :slug slug :data data))]
+    (when-not (:errors (meta photo))
+      (let [new (assoc collection :photos (conj (or (:photos collection) [])
+                                                photo))]
         (io/copy (:tempfile data) (io/file (photo-file photo)))
         (collection-update collection new)))
     photo))
