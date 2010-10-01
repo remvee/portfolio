@@ -20,7 +20,8 @@
 (defn terminator [before after] [before after])
 
 (defmacro validator [& validators]
-  `(fn [before# after#] (last ((-> terminator ~@validators) before# after#))))
+  `(fn [before# after#]
+     (last ((-> terminator ~@validators) before# after#))))
 
 (defn skel [chain attr err pred & args]
   (fn [before after]
@@ -29,17 +30,34 @@
                     after))))
        
 (defn not-blank [chain attr]
-  (skel chain attr :not-blank (fn [before after]
+  (skel chain attr :not-blank (fn [_ after]
                             (or (= "" (attr after))
                                 (nil? (attr after))))))
 
 (defn numeric [chain attr]
-  (skel chain attr :numeric (fn [before after]
+  (skel chain attr :numeric (fn [_ after]
                               (not (number? (attr after))))))
 
+(defn less-than
+  {:test #(are [expected attrs amount]
+               (= expected
+                  (:errors (meta ((validator (less-than :count amount))
+                                  nil attrs))))
+               
+               nil nil nil
+               nil {:count 1} 2
+               {:count [{:less-than 2}]} {:count 3} 2)}
+  [chain attr amount]
+  (skel chain attr {:less-than amount} (fn [_ after]
+                                         (and (number? (attr after))
+                                              (< amount (attr after))))))
+  
 (defn unique
-  {:test #(are [expected before after coll] (= expected (:errors (meta ((validator (unique :id (fn[] coll)))
-                                                                        before after))))
+  {:test #(are [expected before after coll]
+               (= expected
+                  (:errors (meta ((validator (unique :id (fn[] coll)))
+                                  before after))))
+               
                nil nil {} []
                nil nil {:id 1} []
                {:id [:unique]} nil {:id 1} [{:id 1}]
@@ -53,10 +71,13 @@
                                            (coll))))))
 
 (deftest example
-  (are [expected input] (= expected (:errors (meta ((validator (not-blank :name)
-                                                               (not-blank :nr)
-                                                               (numeric :nr))
-                                                    {} input))))
+  (are [expected input]
+       (= expected
+          (:errors (meta ((validator (not-blank :name)
+                                     (not-blank :nr)
+                                     (numeric :nr))
+                          {} input))))
+       
        {:nr [:numeric :not-blank]
         :name [:not-blank]}
        {:foo "bar"}
