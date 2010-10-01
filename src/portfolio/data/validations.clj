@@ -28,8 +28,8 @@
                     (merge-errors after {attr [err]})
                     after))))
        
-(defn blank [chain attr]
-  (skel chain attr :blank (fn [before after]
+(defn not-blank [chain attr]
+  (skel chain attr :not-blank (fn [before after]
                             (or (= "" (attr after))
                                 (nil? (attr after))))))
 
@@ -53,14 +53,14 @@
                                            (coll))))))
 
 (deftest example
-  (are [expected input] (= expected (:errors (meta ((validator (blank :name)
-                                                               (blank :nr)
+  (are [expected input] (= expected (:errors (meta ((validator (not-blank :name)
+                                                               (not-blank :nr)
                                                                (numeric :nr))
                                                     {} input))))
-       {:nr [:numeric :blank]
-        :name [:blank]}
+       {:nr [:numeric :not-blank]
+        :name [:not-blank]}
        {:foo "bar"}
        
-       {:name [:blank]
+       {:name [:not-blank]
         :nr [:numeric]}
        {:nr "foo"}))
