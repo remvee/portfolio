@@ -1,4 +1,5 @@
-(ns portfolio.images)
+(ns portfolio.images
+  (:use [clojure.contrib.math]))
 
 (defn scale [image [width height]]
   (.getScaledInstance image width height java.awt.Image/SCALE_SMOOTH))
@@ -8,6 +9,14 @@
 
 (defn dimensions [image]
   [(.getWidth image) (.getHeight image)])
+
+(defn bounding-box [image [box-width box-height]]
+  (let [[width height] (dimensions image)]
+    (map round
+         (if (> (/ width box-width)
+                (/ height box-height))
+           [box-width (/ height (/ width box-width))]
+           [(/ width (/ height box-height)) box-height]))))
 
 (defn from-file [file]
   (. javax.imageio.ImageIO read file))
