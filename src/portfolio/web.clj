@@ -47,15 +47,15 @@
     [:html
      [:head
       [:title
-       (h (:name (data/site)))]
+       (h (data/site :name))]
       (include-css "/css/screen.css")]
      [:body (when *admin* {:class "admin"})
       [:div.header
-       [:h1 (link-to (collections-url) (h (:name (data/site))))]]
+       [:h1 (link-to (collections-url) (h (data/site :name)))]]
       [:div.content
        body]
       [:div.footer
-       (h (:copyright (data/site)))]]])})
+       (h (data/site :copyright))]]])})
 
 (defn collection-add-form
   ([c] (form-to [:POST (collections-url)]
@@ -103,7 +103,7 @@
                 [:li
                  (collection-add-form c)])]
              [:div.address
-              (interpose [:br] (:address (data/site)))]))
+              (interpose [:br] (data/site :address))]))
   ([] (collections-view nil)))
 
 (defn collection-view
@@ -168,7 +168,7 @@
                              (images/scale (images/bounding-box image *preview-dimensions*))
                              (images/copyright (data/site :copyright)
                                                9
-                                               (images/color 0 0 0 0.33)
+                                               (images/color 0 0 0 0.5)
                                                (images/color 1 1 1 0.25))
                              images/to-stream))}))
   
