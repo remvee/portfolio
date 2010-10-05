@@ -62,15 +62,21 @@
   (. javax.imageio.ImageIO read file))
 
 (defn to-stream [image]
-  (let [in (java.io.PipedInputStream.)
-        out (java.io.PipedOutputStream. in)
+  (let [writer (.next (javax.imageio.ImageIO/getImageWritersByFormatName "JPG"))
+        params (.getDefaultWriteParam writer)
+        stream (java.io.ByteArrayOutputStream.)
+        output (javax.imageio.stream.MemoryCacheImageOutputStream. stream)
         result (java.awt.image.BufferedImage.
                 (.getWidth image)
                 (.getHeight image)
                 java.awt.image.BufferedImage/TYPE_INT_RGB)]
-    (doto (.createGraphics result) (.drawImage image nil nil) .dispose)
-    (.flush result)
-    (doto (Thread. (fn []
-                     (. javax.imageio.ImageIO write result "JPG" out)
-                     (doto out .flush .close))) .start)
-    in))
+    (doto (.createGraphics result)
+      (.drawImage image nil nil)
+      .dispose)
+    (doto params
+      (.setCompressionMode javax.imageio.ImageWriteParam/MODE_EXPLICIT)
+      (.setCompressionQuality 1.0))
+    (doto writer
+      (.setOutput output)
+      (.write nil (javax.imageio.IIOImage. result nil nil) params))
+    (java.io.ByteArrayInputStream. (.toByteArray stream))))
