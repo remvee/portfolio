@@ -18,6 +18,22 @@
            [box-width (/ height (/ width box-width))]
            [(/ width (/ height box-height)) box-height]))))
 
+(defn fade
+  ([image color]
+     (let [result (java.awt.image.BufferedImage.
+                   (.getWidth image)
+                   (.getHeight image)
+                   java.awt.image.BufferedImage/TYPE_INT_RGB)]
+       (doto (.createGraphics result)
+         (.drawImage image nil nil)
+         (.setColor color)
+         (.fillRect 0 0 (.getWidth image) (.getHeight image))
+         .dispose)
+       (.flush result)
+       result))
+    ([image #^Float red #^Float green #^Float blue #^Float alpha]
+     (fade image (java.awt.Color. red green blue alpha))))
+
 (defn from-file [file]
   (. javax.imageio.ImageIO read file))
 
