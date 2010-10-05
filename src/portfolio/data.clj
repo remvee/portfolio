@@ -128,7 +128,7 @@
         photo (photo-validate nil (assoc attrs :slug slug :data data))]
     (when-not (:errors (meta photo))
       (let [new (assoc collection :photos (conj (or (:photos collection) [])
-                                                photo))]
+                                                (dissoc photo :data)))]
         (io/copy (:tempfile data) (io/file (photo-file photo)))
         (collection-update collection new)))
     photo))
