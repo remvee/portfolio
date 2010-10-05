@@ -143,6 +143,7 @@
 
 (def *thumb-dimensions* [100 100])
 (def *preview-dimensions* [500 375])
+(def *background-dimensions* [800 600])
 
 (def rfc1123 (java.text.SimpleDateFormat. "EEE, dd MMM yyyy HH:mm:ss z"))
 (.setTimeZone rfc1123 (java.util.TimeZone/getTimeZone "GMT"))
@@ -163,11 +164,13 @@
                                         [min min])
                            (images/scale *thumb-dimensions*)
                            images/to-stream)
-               "preview" (images/to-stream (if (> (/ width (first *preview-dimensions*))
-                                                  (/ height (last *preview-dimensions*)))
-                                             (images/scale image [(first *preview-dimensions*) -1])
-                                             (images/scale image [-1 (last *preview-dimensions*)]))))
-               }))
+               "preview" (-> image
+                             (images/scale (images/bounding-box image *preview-dimensions*))
+                             (images/copyright (data/site :copyright)
+                                               9
+                                               (images/color 0 0 0 0.33)
+                                               (images/color 1 1 1 0.25))
+                             images/to-stream))}))
   
 ;; controllers
 (defroutes public-routes
