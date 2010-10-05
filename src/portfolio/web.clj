@@ -70,7 +70,8 @@
 
 (defn collection-remove-form [c]
   (form-to [:POST (collection-remove-url c)]
-           (submit-button "remove")))
+           (submit-button {:onclick "return confirm('Sure?')"}
+                          "remove")))
 
 (defn photo-update-form [p]
   (form-to [:POST (photo-url p)]
@@ -86,7 +87,8 @@
 
 (defn photo-remove-form [p]
   (form-to [:POST (photo-remove-url p)]
-           (submit-button "remove")))
+           (submit-button {:onclick "return confirm('Sure?')"}
+                          "remove")))
   
 (defn collections-view
   ([c]
