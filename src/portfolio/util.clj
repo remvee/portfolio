@@ -57,7 +57,8 @@
   "Wrap response to ensure requests are protected by SSL."
   ([app change-schema-fn]
      (fn [req]
-       (if (= :https (:scheme req))
+       (if (or (= :https (:scheme req))
+               (= "https" (get (:headers req) "x_forwarded_proto")))
          (app req)
          (let [url (change-schema-fn req)]
            {:status  302
