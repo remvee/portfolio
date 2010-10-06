@@ -26,17 +26,20 @@ a {
 }
 
 body {
-    margin: 50px auto;
+    margin: 20px auto;
     text-align: center;
-    width: 550px
+    width: 560px
 }
 h1 {
     font-size: 36px;
     font-weight: normal;
 }
 h2 {
-    font-size: 20px;
+    font-size: 14px;
     font-weight: normal;
+}
+h2 a {
+    font-size: 20px;
 }
 form {
     margin: 1em;
@@ -47,6 +50,13 @@ form {
 }
 .error-message {
     color: red;
+}
+div.body {
+    padding: 0 5px;
+    background: #fefefe;
+    border-radius: 10px;
+    -moz-border-radius: 10px;
+    -webkit-border-radius: 10px;
 }
 div.header, div.address, div.footer {
     margin: auto;

@@ -40,7 +40,7 @@
   (str "/image/" (:slug p) "/" size ".jpg"))
 
 ;; views
-(defn layout [& body]
+(defn layout [title & body]
   {:headers {"Content-Type" "text/html"}
    :body
    (html
@@ -48,15 +48,17 @@
     [:html
      [:head
       [:title
-       (h (data/site :name))]
+       (h (str (data/site :name)
+               (if title (str " / " title) "")))]
       (include-css "/css/screen.css")]
      [:body (when *admin* {:class "admin"})
-      [:div.header
-       [:h1 (link-to (collections-url) (h (data/site :name)))]]
-      [:div.content
-       body]
-      [:div.footer
-       (h (data/site :copyright))]]])})
+      [:div.body
+       [:div.header
+        [:h1 (link-to (collections-url) (h (data/site :name)))]]
+       [:div.content
+        body]
+       [:div.footer
+        (h (data/site :copyright))]]]])})
 
 (defn collection-add-form
   ([c] (form-to [:POST (collections-url)]
@@ -93,7 +95,8 @@
   
 (defn collections-view
   ([c]
-     (layout [:ul
+     (layout nil
+             [:ul
               (map (fn [c]
                      [:li
                       [:h2
@@ -109,7 +112,8 @@
 
 (defn collection-view
   ([c p]
-     (layout (if *admin*
+     (layout (:name c)
+             (if *admin*
                [:div.admin
                 (collection-update-form c)
                 (collection-remove-form c)]
@@ -128,16 +132,18 @@
   ([c] (collection-view c nil)))
 
 (defn photo-view [c p]
-  (layout [:h2
+  (layout (str (:name c) " / " (:title p))
+          [:h2
            [:a {:href (collection-url c)}
-            (h (:name c))]]
-          [:div.photo
+            (h (:name c))]
+           " / "
            (if *admin*
+             (photo-update-form p)
+             [:span.title (h (:title p))])]
+          [:div.photo
+           (when *admin*
              [:div
-              (photo-update-form p)
-              (photo-remove-form p)]
-             [:h3
-              (h (:title p))])
+              (photo-remove-form p)])
            [:a {:href (collection-url c)}
             [:img {:src (image-url p 'preview)
                    :alt (:title p)}]]]))
