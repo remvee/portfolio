@@ -62,42 +62,51 @@
         (h (data/site :copyright))]]]])})
 
 (defn collection-add-form
-  ([c] (form-to [:POST (collections-url)]
+  ([c] (form-to {:class "add"}
+                [:POST (collections-url)]
                 (form-field :name c "name")
-                (submit-button "add")))
+                (submit-button {:class "submit"} "add")))
   ([] (collection-add-form nil)))
 
 (defn collection-update-form [c]
-  (form-to [:POST (collection-url c)]
+  (form-to {:class "update"}
+           [:POST (collection-url c)]
            (form-field :name c "name")
            (form-field :description c "description" text-area)
-           (submit-button "update")))
+           (submit-button {:class "submit"} "update")))
 
 (defn collection-remove-form [c]
-  (form-to [:POST (collection-remove-url c)]
-           (submit-button {:onclick "return confirm('Sure?')"}
+  (form-to {:class "remove"}
+           [:POST (collection-remove-url c)]
+           (submit-button {:class "remove"
+                           :onclick "return confirm('Sure?')"}
                           "remove")))
 
 (defn photo-update-title-form [p]
-  (form-to [:POST (photo-url p)]
+  (form-to {:class "update"}
+           [:POST (photo-url p)]
            (form-field :title p "title")
-           (submit-button "update")))
+           (submit-button {:class "submit"} "update")))
 
 (defn photo-update-caption-form [p]
-  (form-to [:POST (photo-url p)]
-           (form-field :caption p "caption")
-           (submit-button "update")))
+  (form-to {:class "update"}
+           [:POST (photo-url p)]
+           (form-field :caption p "caption" text-area)
+           (submit-button {:class "submit"} "update")))
 
 (defn photo-add-form [c p]
-  (form-to {:enctype "multipart/form-data"}
+  (form-to {:class "add"
+            :enctype "multipart/form-data"}
            [:POST (photo-add-url c)]
            (form-field :title p "title")
            (form-field :data p "photo" file-upload)
-           (submit-button "upload")))
+           (submit-button {:class "submit"} "upload")))
 
 (defn photo-remove-form [p]
-  (form-to [:POST (photo-remove-url p)]
-           (submit-button {:onclick "return confirm('Sure?')"}
+  (form-to {:class "remove"}
+           [:POST (photo-remove-url p)]
+           (submit-button {:class "remove"
+                           :onclick "return confirm('Sure?')"}
                           "remove")))
   
 (defn collections-view

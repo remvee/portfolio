@@ -4,9 +4,6 @@ body {
     background-color: #ffffff;
     background-image: url('../images/bg.jpg');
 }
-body.admin {
-    border: solid red 2px;
-}
 table.splash {
     width: 100%;
     height: 100%;
@@ -41,17 +38,8 @@ h2 {
 h2 a {
     font-size: 20px;
 }
-form {
-    margin: 10px;
-    clear: both;
-}
-.field-with-error input {
-    background: #fee;
-}
-.error-message {
-    color: red;
-}
 div.body {
+    position: relative;
     padding: 0 5px;
     background: #fefefe;
     border-radius: 10px;
@@ -109,4 +97,45 @@ div.collections ul li {
 }
 .collection div.description {
     margin: 5px 20px 20px 20px;
+}
+
+.admin div.body {
+    border: solid #0c0 2px;
+}
+.admin form {
+    position: relative;
+    margin: 10px 20px;
+    clear: both;
+}
+.admin form div.field {
+    background: #cfc;
+}
+.admin form label {
+    width: 75px;
+    padding: 2px;
+    float: left;
+    text-align: right;
+}
+.admin form div.field input, .admin form div.field textarea {
+    width: 350px;
+    margin-right: 60px;
+}
+.admin form div.field textarea {
+    height: 175px;
+}
+.admin form .submit {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+}
+.admin .field-with-error input {
+    background: #fee;
+}
+.admin .error-message {
+    color: red;
+}
+.admin form.remove {
+    position: absolute;
+    top: 0;
+    right: 0;
 }
