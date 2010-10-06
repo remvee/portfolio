@@ -154,17 +154,19 @@
         [width height] (images/dimensions image)
         min (min width height)
         max (max width height)]
-    {:headers {"Content-Type" "image/jpeg"
-               "Expires" (.format (rfc1123-date-format)
-                                  (java.util.Date. (+ (System/currentTimeMillis)
-                                                      (* 1000 60 60 24 365))))}
+    {:headers {"Content-Type"  "image/jpeg"
+               "Last-Modified" (.format (rfc1123-date-format)
+                                        (java.util.Date. (long (or (:mtime p) 0))))
+               "Expires"       (.format (rfc1123-date-format)
+                                        (java.util.Date. (+ (System/currentTimeMillis)
+                                                            (* 1000 60 60 24 365))))}
      :body (condp = size
-               "thumb" (-> image
-                           (images/crop [(if (> width min) (/ (- width min) 2) 0)
-                                         (if (> height min) (/ (- height min) 2) 0)]
-                                        [min min])
-                           (images/scale *thumb-dimensions*)
-                           images/to-stream)
+               "thumb"   (-> image
+                             (images/crop [(if (> width min) (/ (- width min) 2) 0)
+                                           (if (> height min) (/ (- height min) 2) 0)]
+                                          [min min])
+                             (images/scale *thumb-dimensions*)
+                             images/to-stream)
                "preview" (-> image
                              (images/scale (images/bounding-box image *preview-dimensions*))
                              (images/copyright (data/site :copyright)
