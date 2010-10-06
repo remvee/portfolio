@@ -5,7 +5,7 @@
         [portfolio.data.validations :as v]))
 
 ;; fixtures
-(def *data-dir* (or (get (System/getenv) "APP_DATA") "/tmp"))
+(def *data-dir* (or (System/getenv "APP_DATA") "/tmp"))
 (def *data-file* (str *data-dir* "/portfolio.sexp"))
 (def *default-site* {:name "Acme Photography"
                      :copyright "Acme Corp. Inc. Limited."

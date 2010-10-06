@@ -5,6 +5,4 @@
      'portfolio.web
      'portfolio.util)
 
-(wrap! admin :force-ssl)
-
 (run-jetty app {:port 8080})

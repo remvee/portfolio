@@ -13,6 +13,7 @@
                         [remvee.ring.middleware.basic-authentication]))
 
 ;; state
+(def production? (not (nil? (System/getenv "APP_DATA"))))
 (def *admin* false)
     
 ;; routes
@@ -231,11 +232,14 @@
 
 (defn wrap-admin [app]
   (ANY "/admin/*" {{path "*"} :params}
-       (wrap-basic-authentication
-        (fn [req]
-          (binding [*admin* true]
-            (app (assoc req :uri (str "/" path)))))
-        authenticated?)))
+       (let [app (wrap-basic-authentication
+                  (fn [req]
+                    (binding [*admin* true]
+                      (app (assoc req :uri (str "/" path)))))
+                  authenticated?)]
+         (if production?
+           (wrap-force-ssl app)
+           app))))
 
 (defroutes admin
   (wrap-admin public-routes)
