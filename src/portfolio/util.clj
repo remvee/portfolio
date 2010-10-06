@@ -42,7 +42,7 @@
   ([attr fields text]
      (form-field attr fields text text-field))
   ([attr fields text f]
-     (let [id    (uniq-id attr)
+     (let [id     (uniq-id attr)
            errors (and (:errors (meta fields)) (attr (:errors (meta fields))))]
        [:div {:class (str "field" (when errors " field-with-error"))}
         [:label {:for id} text]

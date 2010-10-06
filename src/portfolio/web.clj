@@ -1,5 +1,6 @@
-(ns portfolio.web (:use [portfolio.images :as images]
-                        [portfolio.data   :as data]
+(ns portfolio.web (:use [clojure.walk                     :only [keywordize-keys]]
+                        [portfolio.images                 :as images]
+                        [portfolio.data                   :as data]
                         [portfolio.util]
                         [hiccup.core]
                         [hiccup.page-helpers]
@@ -69,6 +70,7 @@
 (defn collection-update-form [c]
   (form-to [:POST (collection-url c)]
            (form-field :name c "name")
+           (form-field :description c "description" text-area)
            (submit-button "update")))
 
 (defn collection-remove-form [c]
@@ -76,9 +78,14 @@
            (submit-button {:onclick "return confirm('Sure?')"}
                           "remove")))
 
-(defn photo-update-form [p]
+(defn photo-update-title-form [p]
   (form-to [:POST (photo-url p)]
            (form-field :title p "title")
+           (submit-button "update")))
+
+(defn photo-update-caption-form [p]
+  (form-to [:POST (photo-url p)]
+           (form-field :caption p "caption")
            (submit-button "update")))
 
 (defn photo-add-form [c p]
@@ -113,22 +120,25 @@
 (defn collection-view
   ([c p]
      (layout (:name c)
-             (if *admin*
-               [:div.admin
-                (collection-update-form c)
-                (collection-remove-form c)]
-               [:h2
-                [:a {:href (collection-url c)}
-                 (h (:name c))]])
-             [:ul.thumbs
-              (map (fn [p]
-                     [:li.thumb
-                      [:a {:href (photo-url p)}
-                       [:img {:src (image-url p 'thumb),
-                              :alt (:title p)}]]])
-                   (:photos c))]
-             (when *admin*
-               (photo-add-form c p))))
+             [:div.collection
+              (if *admin*
+                [:div.admin
+                 (collection-update-form c)
+                 (collection-remove-form c)]
+                [:h2
+                 [:a {:href (collection-url c)}
+                  (h (:name c))]])
+              (when-not (or *admin* (empty? (:description c)))
+                [:div.description (h (:description c))])
+              [:ul.thumbs
+               (map (fn [p]
+                      [:li.thumb
+                       [:a {:href (photo-url p)}
+                        [:img {:src (image-url p 'thumb),
+                               :alt (:title p)}]]])
+                    (:photos c))]
+              (when *admin*
+                (photo-add-form c p))]))
   ([c] (collection-view c nil)))
 
 (defn photo-view [c p]
@@ -138,7 +148,7 @@
             (h (:name c))]
            " / "
            (if *admin*
-             (photo-update-form p)
+             (photo-update-title-form p)
              [:span.title (h (:title p))])]
           [:div.photo
            (when *admin*
@@ -146,7 +156,11 @@
               (photo-remove-form p)])
            [:a {:href (collection-url c)}
             [:img {:src (image-url p 'preview)
-                   :alt (:title p)}]]]))
+                   :alt (:title p)}]]
+           (if *admin*
+             (photo-update-caption-form p)
+             (when-not (empty? (:caption p))
+               [:div.caption (h (:caption p))]))]))
 
 (def *thumb-dimensions* [100 100])
 (def *preview-dimensions* [500 375])
@@ -204,9 +218,10 @@
             (collections-view c)
             (redirect (collections-url)))))
   
-  (POST "/collection/:slug" [slug name]
+  (POST "/collection/:slug" {{:strs [slug] :as params} :params}
         (let [c (data/collection-update (data/collection-by-slug slug)
-                                        {:name name})]
+                                        (select-keys (keywordize-keys params)
+                                                     [:name :description]))]
           (if (:errors (meta c))
             (collection-view c)
             (redirect (collection-url c)))))
@@ -223,9 +238,10 @@
             (collection-view c p)
             (redirect (collection-url c)))))
 
-  (POST "/photo/:slug" [slug title]
+  (POST "/photo/:slug" {{:strs [slug] :as params} :params}
         (let [p (data/photo-by-slug slug)]
-          (data/photo-update p {:title title})
+          (data/photo-update p (select-keys (keywordize-keys params)
+                                            [:title :caption]))
           (redirect (photo-url p))))
 
   (POST "/photo/:slug/remove" [slug]
