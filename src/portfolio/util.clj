@@ -1,5 +1,6 @@
 (ns portfolio.util
-  (:use [hiccup.core]
+  (:use [clojure.contrib.str-utils]
+        [hiccup.core]
         [hiccup.form-helpers]))
 
 ;; view helpers
@@ -52,6 +53,13 @@
         (when errors
           [:span {:class "error-message"} (map name errors)])])))
 
+(defn simple-format [text]
+  (html (map #(vec (list* :p (interpose
+                              [:br]
+                              (map h (re-split #"\n"
+                                               (chomp %))))))
+             (re-split #"\n\s*?\n" text))))
+  
 ;; wrappers
 (defn wrap-force-ssl
   "Wrap response to ensure requests are protected by SSL."

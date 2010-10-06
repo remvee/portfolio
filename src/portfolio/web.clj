@@ -138,7 +138,7 @@
                  [:a {:href (collection-url c)}
                   (h (:name c))]])
               (when-not (or *admin* (empty? (:description c)))
-                [:div.description (h (:description c))])
+                [:div.description (simple-format (:description c))])
               [:ul.thumbs
                (map (fn [p]
                       [:li.thumb
@@ -169,7 +169,7 @@
            (if *admin*
              (photo-update-caption-form p)
              (when-not (empty? (:caption p))
-               [:div.caption (h (:caption p))]))]))
+               [:div.caption (simple-format (:caption p))]))]))
 
 (def *thumb-dimensions* [100 100])
 (def *preview-dimensions* [500 375])
