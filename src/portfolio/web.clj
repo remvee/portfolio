@@ -112,9 +112,9 @@
 (defn collections-view
   ([c]
      (layout nil
-             [:ul
+             [:ul.collections
               (map (fn [c]
-                     [:li
+                     [:li.collection
                       [:h2
                        [:a {:href (collection-url c)}
                         (h (:name c))]]])

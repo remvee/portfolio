@@ -72,9 +72,15 @@ div.content ul {
     margin: 0;
     padding: 0;
 }
-div.collections ul li {
-    margin: 1em;
+div.content ul.collections {
+    margin: 10px 0;
+}
+ul li {
+    margin: 0;
     padding: 0;
+}
+ul li h2 {
+    margin: 6px 10px;
 }
 .thumbs {
     display: block;
