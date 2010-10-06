@@ -145,8 +145,8 @@
 (def *preview-dimensions* [500 375])
 (def *background-dimensions* [800 600])
 
-(def rfc1123 (java.text.SimpleDateFormat. "EEE, dd MMM yyyy HH:mm:ss z"))
-(.setTimeZone rfc1123 (java.util.TimeZone/getTimeZone "GMT"))
+(defn rfc1123-date-format [] (doto (java.text.SimpleDateFormat. "EEE, dd MMM yyyy HH:mm:ss z")
+                   (.setTimeZone (java.util.TimeZone/getTimeZone "GMT"))))
 
 (defn image-response [p size]
   (let [image (-> (java.io.File. (photo-file p)) images/from-file)
@@ -154,9 +154,9 @@
         min (min width height)
         max (max width height)]
     {:headers {"Content-Type" "image/jpeg"
-               "Expire" (.format rfc1123
-                                 (java.util.Date. (+ (System/currentTimeMillis)
-                                                     (* 1000 60 60 24 365))))}
+               "Expires" (.format (rfc1123-date-format)
+                                  (java.util.Date. (+ (System/currentTimeMillis)
+                                                      (* 1000 60 60 24 365))))}
      :body (condp = size
                "thumb" (-> image
                            (images/crop [(if (> width min) (/ (- width min) 2) 0)
