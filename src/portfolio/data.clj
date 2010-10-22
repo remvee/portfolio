@@ -17,11 +17,22 @@
 ;; state
 (declare *site*)
 
-(defn- store! [] (spit *data-file* (pr-str (deref *site*))))
-(defn- read! [] (if (.canRead (io/file *data-file*)) (read-string (slurp *data-file*)) *default-site*))
+(defn store [file]
+  (spit file (pr-str @*site*))
+  file)
+(defn fetch [file]
+  (if (.canRead (io/file file))
+    (read-string (slurp file))
+    *default-site*))
 
-(def *site* (ref (read!)))
+(def *site* (atom (fetch *data-file*)))
 
+(def backup-agent (agent *data-file*))
+
+(defn update-site [f]
+  (dosync (swap! *site* f)
+          (send-off backup-agent store)))
+                   
 ;; helpers
 (defn name->slug
   {:test #(do
@@ -66,23 +77,21 @@
                                {:name name
                                 :slug (name->slug name)})]
     (when-not (:errors (meta c))
-      (dosync (commute *site*
-                       assoc
+      (update-site (fn [site]
+                     (assoc site
                        :collections
-                       (vec (conj (collections) c))))
-      (store!))
+                       (vec (conj (collections) c))))))
     c))
 
 (defn collection-update [collection attrs]
   (let [c (collection-validate collection
                                (merge collection attrs))]
     (when-not (:errors (meta c))
-      (dosync (commute *site*
-                       assoc
+      (update-site (fn [site]
+                     (assoc site
                        :collections
                        (vec (replace {collection c}
-                                     (collections)))))
-      (store!))
+                                     (collections)))))))
     c))
 
 (declare photo-remove)
@@ -90,13 +99,12 @@
 (defn collection-remove [collection]
   (doseq [p (:photos collection)]
     (photo-remove p))
-  (dosync (commute *site*
-                   assoc
+  (update-site (fn [site]
+                 (assoc site
                    :collections
                    (vec (remove #(= (:slug collection)
                                     (:slug %))
-                                (collections)))))
-  (store!))
+                                (collections)))))))
 
 (defn collection-by-photo [photo]
   (first (filter #(some (partial = photo) (:photos %))
@@ -146,6 +154,5 @@
   (let [collection (collection-by-photo photo)
         new (assoc collection :photos (replace {photo (merge photo attrs)}
                                                (:photos collection)))]
-    (collection-update collection new)
-    (store!)))
+    (collection-update collection new)))
  
