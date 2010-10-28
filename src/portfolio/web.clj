@@ -42,12 +42,14 @@
 
 ;; views
 (defn layout [title & body]
-  {:headers {"Content-Type" "text/html"}
+  {:headers {"Content-Type" "text/html; charset=UTF-8"}
    :body
    (html
     (doctype :html4)
     [:html
      [:head
+      [:meta {:http-equiv "Content-Type",
+              :content "text/html; charset=utf-8"}]
       [:title
        (h (str (data/site :name)
                (if title (str " / " title) "")))]
