@@ -40,7 +40,7 @@
             (is (= "name-alt-alt" (name->slug "name" ["name" "name-alt"]))))}
   ([name]
      (re-gsub #"-+" "-"
-              (re-gsub #"[^a-z0-9_-]" "-" (or name ""))))
+              (re-gsub #"(?i)[^a-z0-9_-]" "-" (or name ""))))
   ([name existing]
      (let [candidate (name->slug name)]
        (if (some (partial = candidate) existing)
