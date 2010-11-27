@@ -4,20 +4,36 @@ function ids(sortable, re) {
   })
 }
 
+function highlighter(selector) {
+  return function() {
+    $(selector).effect("highlight", {color: "#4f4"})
+  }
+}
+
 $(document).ready(function() {
   $(".collections").sortable({
     update: function() {
-      var cids = ids(this, /^c-/)
-      $.post("/admin/collections/reorder", {slugs: cids})
+      $.post("/admin/collections/reorder",
+             {slugs: ids(this, /^c-/)},
+             highlighter(".collections"))
     }
-  })
+  });
 
   $(".thumbs").sortable({
     update: function() {
-      var c = $(this).sortable("widget").parent(".collection")[0]
-      var cid = c.id.replace(/^c-/, "")
-      var pids = ids(this, /^p-/)
-      $.post("/admin/collection/" + cid + "/reorder", {slugs: pids})
+      var c = $(this).
+        sortable("widget").
+        parent(".collection")[0].
+        id.replace(/^c-/, "")
+
+      $.post("/admin/collection/" + escape(c) + "/reorder",
+             {slugs: ids(this, /^p-/)},
+             highlighter(".thumbs li"))
     }
-  })
+  });
+
+  (function(){
+    var hash = document.location.hash;
+    setTimeout(function() { highlighter(hash)() }, 250)
+  })()
 })

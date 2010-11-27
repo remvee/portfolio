@@ -16,7 +16,7 @@
 ;; state
 (def production? (not (nil? (System/getenv "APP_DATA"))))
 (def *admin* false)
-    
+
 ;; routes
 (defn collections-url []
   (if *admin* "/admin/collections" "/collections"))
@@ -26,7 +26,7 @@
 
 (defn collection-remove-url [c]
   (str (collection-url c) "/remove"))
-       
+
 (defn photo-url [p]
   (str (if *admin* "/admin/photo" "/photo")
        "/" (:slug p)))
@@ -112,7 +112,7 @@
            (submit-button {:class "remove"
                            :onclick "return confirm('Sure?')"}
                           "remove")))
-  
+
 (defn collections-view
   ([c]
      (layout nil
@@ -155,14 +155,15 @@
 
 (defn photo-view [c p]
   (layout (str (:name c) " / " (:title p))
-          [:h2
-           [:a {:href (collection-url c)}
-            (h (:name c))]
-           " / "
-           (if *admin*
-             (photo-update-title-form p)
-             [:span.title (h (:title p))])]
-          [:div.photo
+          [:div.photo {:id (str "p-" (:slug p))
+                       }
+           [:h2
+            [:a {:href (collection-url c)}
+             (h (:name c))]
+            " / "
+            (if *admin*
+              (photo-update-title-form p)
+              [:span.title (h (:title p))])]
            (when *admin*
              [:div
               (photo-remove-form p)])
@@ -179,7 +180,7 @@
 (def *background-dimensions* [800 600])
 
 (defn rfc1123-date-format [] (doto (java.text.SimpleDateFormat. "EEE, dd MMM yyyy HH:mm:ss z")
-                   (.setTimeZone (java.util.TimeZone/getTimeZone "GMT"))))
+                               (.setTimeZone (java.util.TimeZone/getTimeZone "GMT"))))
 
 (defn image-response [p size]
   (let [image (-> (java.io.File. (photo-file p)) images/from-file)
@@ -206,20 +207,20 @@
                                                (images/color 0 0 0 0.5)
                                                (images/color 1 1 1 0.25))
                              images/to-stream))}))
-  
+
 ;; controllers
 (defroutes public-routes
   (GET "/collections" []
        (collections-view))
-  
+
   (GET "/collection/:slug" [slug]
        (collection-view (data/collection-by-slug slug)))
-  
+
   (GET "/photo/:slug" [slug]
        (let [p (data/photo-by-slug slug)
              c (data/collection-by-photo p)]
          (photo-view c p)))
-  
+
   (GET "/image/:slug/:size.jpg" [slug size]
        (image-response (data/photo-by-slug slug) size)))
 
@@ -228,7 +229,7 @@
         (let [c (data/collection-add name)]
           (if (:errors (meta c))
             (collections-view c)
-            (redirect (collections-url)))))
+            (redirect (str (collections-url) "#c-" (:slug c))))))
 
   (POST "/collections/reorder" {{slugs "slugs[]"} :params}
         (let [c (map data/collection-by-slug slugs)]
@@ -237,38 +238,38 @@
                            :collections
                            (vec c))))
           {:status 200}))
-  
+
   (POST "/collection/:slug" {{:strs [slug] :as params} :params}
         (let [c (data/collection-update (data/collection-by-slug slug)
                                         (select-keys (keywordize-keys params)
                                                      [:name :description]))]
           (if (:errors (meta c))
             (collection-view c)
-            (redirect (collection-url c)))))
-  
+            (redirect (str (collection-url c) "#c-" (:slug c))))))
+
   (POST "/collection/:slug/remove" [slug]
         (let [c (data/collection-by-slug slug)]
           (data/collection-remove c)
           (redirect (collections-url))))
-  
+
   (POST "/collection/:slug/add" [slug data title]
         (let [c (data/collection-by-slug slug)
               p (data/photo-add c {:title title} data)]
           (if (:errors (meta p))
             (collection-view c p)
-            (redirect (collection-url c)))))
+            (redirect (str (collection-url c) "#p-" (:slug p))))))
 
   (POST "/collection/:slug/reorder" {{slug "slug", slugs "slugs[]"} :params}
         (let [c (data/collection-by-slug slug)
               p (map data/photo-by-slug slugs)]
           (data/collection-update c {:photos (vec  p)})
           {:status 200}))
-  
+
   (POST "/photo/:slug" {{:strs [slug] :as params} :params}
         (let [p (data/photo-by-slug slug)]
           (data/photo-update p (select-keys (keywordize-keys params)
                                             [:title :caption]))
-          (redirect (photo-url p))))
+          (redirect (str (photo-url p) "#p-" (:slug p)))))
 
   (POST "/photo/:slug/remove" [slug]
         (let [p (data/photo-by-slug slug)
