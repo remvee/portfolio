@@ -53,7 +53,9 @@
       [:title
        (h (str (data/site :name)
                (if title (str " / " title) "")))]
-      (include-css "/css/screen.css")]
+      (include-css "/css/screen.css")
+      (when *admin*
+        (include-js "/js/jquery.js" "/js/jquery-ui.js" "/js/admin.js"))]
      [:body (when *admin* {:class "admin"})
       [:div.body
        [:div.header
@@ -116,14 +118,13 @@
      (layout nil
              [:ul.collections
               (map (fn [c]
-                     [:li.collection
+                     [:li.collection {:id (str "c-" (:slug c))}
                       [:h2
                        [:a {:href (collection-url c)}
                         (h (:name c))]]])
-                   (collections))
-              (when *admin*
-                [:li
-                 (collection-add-form c)])]
+                   (collections))]
+             (when *admin*
+               (collection-add-form c))
              [:div.address
               (interpose [:br] (data/site :address))]))
   ([] (collections-view nil)))
@@ -131,7 +132,7 @@
 (defn collection-view
   ([c p]
      (layout (:name c)
-             [:div.collection
+             [:div.collection {:id (str "c-" (:slug c))}
               (if *admin*
                 [:div.admin
                  (collection-update-form c)
@@ -143,7 +144,7 @@
                 [:div.description (simple-format (:description c))])
               [:ul.thumbs
                (map (fn [p]
-                      [:li.thumb
+                      [:li.thumb {:id (str "p-" (:slug p))}
                        [:a {:href (photo-url p)}
                         [:img {:src (image-url p 'thumb),
                                :alt (:title p)}]]])
@@ -228,6 +229,14 @@
           (if (:errors (meta c))
             (collections-view c)
             (redirect (collections-url)))))
+
+  (POST "/collections/reorder" {{slugs "slugs[]"} :params}
+        (let [c (map data/collection-by-slug slugs)]
+          (update-site (fn [site]
+                         (assoc site
+                           :collections
+                           (vec c))))
+          {:status 200}))
   
   (POST "/collection/:slug" {{:strs [slug] :as params} :params}
         (let [c (data/collection-update (data/collection-by-slug slug)
@@ -249,6 +258,12 @@
             (collection-view c p)
             (redirect (collection-url c)))))
 
+  (POST "/collection/:slug/reorder" {{slug "slug", slugs "slugs[]"} :params}
+        (let [c (data/collection-by-slug slug)
+              p (map data/photo-by-slug slugs)]
+          (data/collection-update c {:photos (vec  p)})
+          {:status 200}))
+  
   (POST "/photo/:slug" {{:strs [slug] :as params} :params}
         (let [p (data/photo-by-slug slug)]
           (data/photo-update p (select-keys (keywordize-keys params)
