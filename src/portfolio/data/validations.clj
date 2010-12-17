@@ -29,33 +29,39 @@
                     (merge-errors after {attr [err]})
                     after))))
 
-(defn not-blank [chain attr]
-  (skel chain attr :not-blank (fn [_ after]
-                                (or (= "" (attr after))
-                                    (nil? (attr after))))))
+(defn not-blank [chain & attrs]
+  (reduce (fn [chain attr]
+            (skel chain attr :not-blank (fn [_ after]
+                                          (or (= "" (attr after))
+                                              (nil? (attr after))))))
+          chain attrs))
 
-(defn numeric [chain attr]
-  (skel chain attr :numeric (fn [_ after]
-                              (not (number? (attr after))))))
+(defn numeric [chain & attrs]
+  (reduce (fn [chain attr]
+            (skel chain attr :numeric (fn [_ after]
+                                        (not (number? (attr after))))))
+          chain attrs))
 
 (defn less-than
   {:test #(are [expected attrs amount]
                (= expected
-                  (:errors (meta ((validator (less-than :count amount))
+                  (:errors (meta ((validator (less-than amount :count))
                                   nil attrs))))
                
                nil nil nil
                nil {:count 1} 2
                {:count [{:less-than 2}]} {:count 3} 2)}
-  [chain attr amount]
-  (skel chain attr {:less-than amount} (fn [_ after]
-                                         (and (number? (attr after))
-                                              (< amount (attr after))))))
+  [chain amount & attrs]
+  (reduce (fn [chain attr]
+            (skel chain attr {:less-than amount} (fn [_ after]
+                                                   (and (number? (attr after))
+                                                        (< amount (attr after))))))
+          chain attrs))
 
 (defn unique
   {:test #(are [expected before after coll]
                (= expected
-                  (:errors (meta ((validator (unique :id (fn[] coll)))
+                  (:errors (meta ((validator (unique (fn [] coll) :id))
                                   before after))))
                
                nil nil {} []
@@ -64,19 +70,24 @@
                nil {:id 1} {:id 1 :foo 1} [{:id 1}]
                {:id [:unique]} {:id 1 :bar 1} {:id 1 :foo 1} [{:id 1}]
                nil nil {:id 2} [{:id 1}])}
-  [chain attr coll]
-  (skel chain attr :unique (fn [before after]
-                             (some #(= (attr after) (attr %))
-                                   (filter (partial not= before)
-                                           (coll))))))
+  [chain collfn & attrs]
+  (reduce (fn [chain attr]
+            (skel chain attr :unique (fn [before after]
+                                       (some #(= (attr after) (attr %))
+                                             (filter (partial not= before)
+                                                     (collfn))))))
+          chain attrs))
 
 (deftest example
   (are [expected input]
        (= expected
-          (:errors (meta ((validator (not-blank :name)
-                                     (not-blank :nr)
-                                     (numeric :nr))
+          (:errors (meta ((validator (not-blank :name :nr)
+                                     (numeric :nr)
+                                     (less-than 10 :count))
                           {} input))))
+
+       nil
+       {:nr 1, :name "test", :count 5}
        
        {:nr [:numeric :not-blank]
         :name [:not-blank]}
@@ -84,4 +95,7 @@
        
        {:name [:not-blank]
         :nr [:numeric]}
-       {:nr "foo"}))
+       {:nr "foo"}
+
+       {:count [{:less-than 10}]}
+       {:nr 1, :name "test", :count 11}))

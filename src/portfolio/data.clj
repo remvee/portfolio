@@ -49,6 +49,10 @@
          candidate))))
 
 ;; models
+(defn site
+  ([] @*site*)
+  ([attr] (attr @*site*)))
+
 (defn collections
   ([] (:collections @*site*))
   ([where]
@@ -65,7 +69,7 @@
   (first (collections {:slug slug})))
 
 (def collection-validator (v/validator (v/not-blank :name)
-                                       (v/unique :name collections)))
+                                       (v/unique collections :name)))
 (defn collection-validate [before after]
   (collection-validator before after))
 
@@ -107,8 +111,7 @@
   (first (filter #(some (partial = photo) (:photos %))
                  (collections))))
 
-(def photo-validator (v/validator (v/not-blank :title) ; TODO allow multiple arguments to v/not-blank
-                                  (v/not-blank :slug)
+(def photo-validator (v/validator (v/not-blank :title :slug)
                                   (v/skel :data :need-data
                                           (fn [before after]
                                             (and (empty? before)
