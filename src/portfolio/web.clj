@@ -233,10 +233,10 @@
 
   (POST "/collections/reorder" {{slugs "slugs[]"} :params}
         (let [c (map data/collection-by-slug slugs)]
-          (update-site (fn [site]
-                         (assoc site
-                           :collections
-                           (vec c))))
+          (data/update-site (fn [site]
+                              (assoc site
+                                :collections
+                                (vec c))))
           {:status 200}))
 
   (POST "/collection/:slug" {{:strs [slug] :as params} :params}

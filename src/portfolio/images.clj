@@ -57,7 +57,7 @@
                    (int (- x (.getX bounds)))
                    (int (- y (.getY bounds)))))
     result))
-  
+
 (defn from-file [file]
   (. javax.imageio.ImageIO read file))
 

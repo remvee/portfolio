@@ -28,11 +28,11 @@
     (chain before (if (apply pred before after args)
                     (merge-errors after {attr [err]})
                     after))))
-       
+
 (defn not-blank [chain attr]
   (skel chain attr :not-blank (fn [_ after]
-                            (or (= "" (attr after))
-                                (nil? (attr after))))))
+                                (or (= "" (attr after))
+                                    (nil? (attr after))))))
 
 (defn numeric [chain attr]
   (skel chain attr :numeric (fn [_ after]
@@ -51,7 +51,7 @@
   (skel chain attr {:less-than amount} (fn [_ after]
                                          (and (number? (attr after))
                                               (< amount (attr after))))))
-  
+
 (defn unique
   {:test #(are [expected before after coll]
                (= expected

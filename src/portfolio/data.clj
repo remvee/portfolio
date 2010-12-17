@@ -20,6 +20,7 @@
 (defn store [file]
   (spit file (pr-str @*site*))
   file)
+
 (defn fetch [file]
   (if (.canRead (io/file file))
     (read-string (slurp file))
@@ -32,7 +33,7 @@
 (defn update-site [f]
   (dosync (swap! *site* f)
           (send-off backup-agent store)))
-                   
+
 ;; helpers
 (defn name->slug
   {:test #(do
@@ -48,12 +49,8 @@
          candidate))))
 
 ;; models
-(defn site
-  ([] (deref *site*))
-  ([k] (get (site) k)))
-
 (defn collections
-  ([] (site :collections))
+  ([] (:collections @*site*))
   ([where]
      (filter (fn [c]
                (reduce (fn [m k]
@@ -68,10 +65,10 @@
   (first (collections {:slug slug})))
 
 (def collection-validator (v/validator (v/not-blank :name)
-                                      (v/unique :name #(collections))))
+                                       (v/unique :name collections)))
 (defn collection-validate [before after]
   (collection-validator before after))
-  
+
 (defn collection-add [name]
   (let [c (collection-validate nil
                                {:name name
@@ -127,7 +124,7 @@
 
 (defn photo-file [photo]
   (str *data-dir* "/photo-" (:slug photo)))
-  
+
 (defn photo-add [collection attrs data]
   (let [slug (name->slug (str (:slug collection)
                               "-"
@@ -155,4 +152,3 @@
         new (assoc collection :photos (replace {photo (merge photo attrs)}
                                                (:photos collection)))]
     (collection-update collection new)))
- 

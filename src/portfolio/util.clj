@@ -59,7 +59,7 @@
                               (map h (re-split #"\n"
                                                (chomp %))))))
              (re-split #"\n\s*?\n" text))))
-  
+
 ;; wrappers
 (defn wrap-force-ssl
   "Wrap response to ensure requests are protected by SSL."
