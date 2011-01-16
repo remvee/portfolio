@@ -7,7 +7,6 @@
                         [hiccup.form-helpers]
                         [compojure.core                   :only [defroutes wrap! GET POST ANY]]
                         [ring.util.response               :only [redirect]]
-                        [ring.middleware.stacktrace       :only [wrap-stacktrace]]
                         [ring.middleware.file             :only [wrap-file]]
                         [ring.middleware.file-info        :only [wrap-file-info]]
                         [ring.middleware.multipart-params :only [wrap-multipart-params]]
