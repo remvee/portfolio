@@ -1,16 +1,34 @@
-(ns portfolio.images
+;; Copyright (c) Remco van 't Veer. All rights reserved.
+;; The use and distribution terms for this software are covered by the Eclipse
+;; Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php) which
+;; can be found in the file epl-v10.html at the root of this distribution.  By
+;; using this software in any fashion, you are agreeing to be bound by the
+;; terms of this license.  You must not remove this notice, or any other, from
+;; this software.
+
+(ns #^{:author "Remco van 't Veer"
+       :doc "Operations on bitmap images operations."}
+  portfolio.images
   (:use [clojure.contrib.math]))
 
-(defn scale [image [width height]]
+(defn scale
+  "Scale image."
+  [image [width height]]
   (.getScaledInstance image width height java.awt.Image/SCALE_SMOOTH))
 
-(defn crop [image [x y] [width height]]
+(defn crop
+  "Crop image."
+  [image [x y] [width height]]
   (.getSubimage image x y width height))
 
-(defn dimensions [image]
+(defn dimensions
+  "Determine image width and height."
+  [image]
   [(.getWidth image) (.getHeight image)])
 
-(defn bounding-box [image [box-width box-height]]
+(defn bounding-box
+  "Determine bounding box in box-width x box-height for given image."
+  [image [box-width box-height]]
   (let [[width height] (dimensions image)]
     (map round
          (if (> (/ width box-width)
@@ -18,10 +36,15 @@
            [box-width (/ height (/ width box-width))]
            [(/ width (/ height box-height)) box-height]))))
 
-(defn color [#^Float red #^Float green #^Float blue #^Float alpha]
+(defn color
+  "Return a RGBA java.awt.Color instance."
+  [#^Float red #^Float green #^Float blue #^Float alpha]
   (java.awt.Color. red green blue alpha))
 
-(defn fade [image color]
+(defn fade
+  "Fade image by applying an overlay of a given color.  Use color
+alpha channel to adjust opacity."
+  [image color]
   (let [result (java.awt.image.BufferedImage.
                 (.getWidth image)
                 (.getHeight image)
@@ -34,7 +57,9 @@
     (.flush result)
     result))
 
-(defn copyright [image text font-size fg-color bg-color]
+(defn copyright
+  "Insert box with copyright notice in the bottom right corner."
+  [image text font-size fg-color bg-color]
   (let [[width height] (dimensions image)
         result (java.awt.image.BufferedImage. width height java.awt.image.BufferedImage/TYPE_INT_ARGB)
         graphics (.createGraphics result)
@@ -59,9 +84,11 @@
     result))
 
 (defn from-file [file]
+  "Read a file into a javax.imageio.ImageIO instance."
   (. javax.imageio.ImageIO read file))
 
 (defn to-stream [image]
+  "Create a 100% quality JPEG input stream from given image."
   (let [writer (.next (javax.imageio.ImageIO/getImageWritersByFormatName "JPG"))
         params (.getDefaultWriteParam writer)
         stream (java.io.ByteArrayOutputStream.)
