@@ -1,8 +1,7 @@
 body {
     font-family: Georgia, Times, serif;
     font-size: 12px;
-    background-color: #ffffff;
-    background-image: url('../images/bg.jpg');
+    background-color: #f8f8f8;
 }
 table.splash {
     width: 100%;
@@ -18,7 +17,7 @@ img {
     border: none;
 }
 a {
-    color: #e81c29;
+    color: #c00;
     text-decoration: none;
 }
 
@@ -43,6 +42,7 @@ div.body {
     padding: 0 5px;
     background: #fefefe;
     border-radius: 10px;
+    border: solid #ddd 2px;
     -moz-border-radius: 10px;
     -webkit-border-radius: 10px;
 }
@@ -53,7 +53,7 @@ div.header, div.address, div.footer {
     clear: both;
 }
 div.header {
-    border-bottom: solid #e81c29 1px;
+    border-bottom: solid #c00 2px;
 }
 div.header h1, div.header h1 a {
     color: black;
@@ -61,10 +61,10 @@ div.header h1, div.header h1 a {
     margin: 0 auto 6px auto;
 }
 div.address {
-    border-top: solid #e81c29 1px;
+    border-top: solid #c00 2px;
 }
 div.footer {
-    border-top: solid #e81c29 1px;
+    border-top: solid #c00 2px;
     font-size: 10px;
 }
 div.content ul {

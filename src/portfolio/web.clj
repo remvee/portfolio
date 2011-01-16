@@ -210,6 +210,9 @@
 
 ;; controllers
 (defroutes public-routes
+  (GET "/" []
+       (redirect (collections-url)))
+  
   (GET "/collections" []
        (collections-view))
 
