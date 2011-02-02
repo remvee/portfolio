@@ -1,11 +1,3 @@
-;; Copyright (c) Remco van 't Veer. All rights reserved.
-;; The use and distribution terms for this software are covered by the Eclipse
-;; Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php) which
-;; can be found in the file epl-v10.html at the root of this distribution.  By
-;; using this software in any fashion, you are agreeing to be bound by the
-;; terms of this license.  You must not remove this notice, or any other, from
-;; this software.
-
 (ns #^{:author "Remco van 't Veer"
        :doc "Basic validation framework for maps."}
   portfolio.data.validations
@@ -40,29 +32,28 @@ Example: (validator (not-blank :name :nr) (numeric :nr) (less-than 10 :nr))"
 
 (defn skel
   "Skeleton validation function to build validations on top of.  The
-chain is the current validation composition to build on to, attr is
-the attribute name to validate for, err the error symbol it may yield
+chain is the current validation composition to build on to, attrs are
+the attribute names to validate for, err the error symbol it may yield
 and pred the function to preform the validation."
-  [chain attr err pred & args]
-  (fn [before after]
-    (chain before (if (apply pred before after args)
-                    (merge-errors after {attr [err]})
-                    after))))
+  [chain attrs err pred & args]
+  (reduce (fn [chain attr]
+            (fn [before after]
+              (chain before (if (pred attr before after)
+                              (merge-errors after {attr [err]})
+                              after))))
+          chain
+          attrs))
 
 (defn not-blank [chain & attrs]
   "Attribute may not be nil or empty string validation."
-  (reduce (fn [chain attr]
-            (skel chain attr :not-blank (fn [_ after]
-                                          (or (= "" (attr after))
-                                              (nil? (attr after))))))
-          chain attrs))
+  (skel chain attrs :not-blank (fn [attr _ after]
+                                 (or (= "" (attr after))
+                                     (nil? (attr after))))))
 
 (defn numeric [chain & attrs]
   "Attribute must be numeric validation."
-  (reduce (fn [chain attr]
-            (skel chain attr :numeric (fn [_ after]
-                                        (not (number? (attr after))))))
-          chain attrs))
+  (skel chain attrs :numeric (fn [attr _ after]
+                               (not (number? (attr after))))))
 
 (defn less-than
   "Attribute must be less then validation."
@@ -75,11 +66,9 @@ and pred the function to preform the validation."
                nil {:count 1} 2
                {:count [{:less-than 2}]} {:count 3} 2)}
   [chain amount & attrs]
-  (reduce (fn [chain attr]
-            (skel chain attr {:less-than amount} (fn [_ after]
-                                                   (and (number? (attr after))
-                                                        (< amount (attr after))))))
-          chain attrs))
+  (skel chain attrs {:less-than amount} (fn [attr _ after]
+                                          (and (number? (attr after))
+                                               (< amount (attr after))))))
 
 (defn unique
   "Attribute must be uniq to collection returned by collfn."
@@ -95,12 +84,10 @@ and pred the function to preform the validation."
                {:id [:unique]} {:id 1 :bar 1} {:id 1 :foo 1} [{:id 1}]
                nil nil {:id 2} [{:id 1}])}
   [chain collfn & attrs]
-  (reduce (fn [chain attr]
-            (skel chain attr :unique (fn [before after]
-                                       (some #(= (attr after) (attr %))
-                                             (filter (partial not= before)
-                                                     (collfn))))))
-          chain attrs))
+  (skel chain attrs :unique (fn [attr before after]
+                              (some #(= (attr after) (attr %))
+                                    (filter (partial not= before)
+                                            (collfn))))))
 
 (deftest example
   (are [expected input]
