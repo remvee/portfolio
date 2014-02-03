@@ -9,24 +9,26 @@
 (ns #^{:author "Remco van 't Veer"
        :doc "Site data accessors."}
   portfolio.data
-  (:use [clojure.test]
-        [clojure.contrib.str-utils]
-        [clojure.java.io :as io :only [copy file]]
-        [portfolio.data.validations :as v]))
+  (:use
+   [clojure.test])
+  (:require
+   [clojure.string :as s]
+   [clojure.java.io :as io :only [copy file]]
+   [portfolio.data.validations :as v]))
 
 ;; fixtures
-(def *data-dir* (or (System/getenv "APP_DATA") "/tmp"))
-(def *data-file* (str *data-dir* "/portfolio.sexp"))
-(def *default-site* {:name "Acme Photography"
-                     :copyright "Acme Corp. Inc. Limited."
-                     :address ["Acme Headquarter"
-                               "Somewhere"
-                               "In the world"]
-                     :username "t"
-                     :password "t"})
+(def ^:dynamic *data-dir* (or (System/getenv "APP_DATA") "/tmp"))
+(def ^:dynamic *data-file* (str *data-dir* "/portfolio.sexp"))
+(def ^:dynamic *default-site* {:name "Acme Photography"
+                               :copyright "Acme Corp. Inc. Limited."
+                               :address ["Acme Headquarter"
+                                         "Somewhere"
+                                         "In the world"]
+                               :username "t"
+                               :password "t"})
 
 ;; state
-(declare *site*)
+(declare ^:dynamic *site*)
 
 (defn store
   "Store site data in a file."
@@ -41,7 +43,7 @@
     (read-string (slurp file))
     *default-site*))
 
-(def *site* (atom (fetch *data-file*)))
+(def ^:dynamic *site* (atom (fetch *data-file*)))
 
 (def backup-agent (agent *data-file*))
 
@@ -58,8 +60,9 @@
             (is (= "name-alt" (name->slug "name" ["name"])))
             (is (= "name-alt-alt" (name->slug "name" ["name" "name-alt"]))))}
   ([name]
-     (re-gsub #"-+" "-"
-              (re-gsub #"(?i)[^a-z0-9_-]" "-" (or name ""))))
+     (s/replace
+        (s/replace (or name "") #"(?i)[^a-z0-9_-]" "-")
+        #"-+", "-"))
   ([name existing]
      (let [candidate (name->slug name)]
        (if (some (partial = candidate) existing)

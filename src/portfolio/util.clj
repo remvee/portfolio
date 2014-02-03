@@ -9,9 +9,11 @@
 (ns #^{:author "Remco van 't Veer"
        :doc "HTML helper functions and middleware."}
   portfolio.util
-  (:use [clojure.contrib.str-utils]
-        [hiccup.core]
-        [hiccup.form-helpers]))
+  (:use
+   [hiccup.core]
+   [hiccup.form])
+  (:require
+   [clojure.string :as s]))
 
 ;; view helpers
 (defmulti htmlify "Render object to HTML." class)
@@ -72,9 +74,8 @@ tag and error messages when available as meta data."
   [text]
   (html (map #(vec (list* :p (interpose
                               [:br]
-                              (map h (re-split #"\n"
-                                               (chomp %))))))
-             (re-split #"\n\s*?\n" text))))
+                              (map h (s/split (s/trim-newline %) #"\n")))))
+             (s/split text #"\n\s*?\n"))))
 
 ;; wrappers
 (defn wrap-force-ssl

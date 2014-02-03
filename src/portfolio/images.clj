@@ -9,7 +9,7 @@
 (ns #^{:author "Remco van 't Veer"
        :doc "Operations on bitmap images operations."}
   portfolio.images
-  (:use [clojure.contrib.math]))
+  (:use [clojure.math.numeric-tower]))
 
 (defn scale
   "Scale image."

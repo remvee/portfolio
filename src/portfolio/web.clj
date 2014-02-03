@@ -1,20 +1,23 @@
-(ns portfolio.web (:use [clojure.walk                     :only [keywordize-keys]]
-                        [portfolio.images                 :as images]
-                        [portfolio.data                   :as data]
-                        [portfolio.util]
-                        [hiccup.core]
-                        [hiccup.page-helpers]
-                        [hiccup.form-helpers]
-                        [compojure.core                   :only [defroutes wrap! GET POST ANY]]
-                        [ring.util.response               :only [redirect]]
-                        [ring.middleware.file             :only [wrap-file]]
-                        [ring.middleware.file-info        :only [wrap-file-info]]
-                        [ring.middleware.multipart-params :only [wrap-multipart-params]]
-                        [remvee.ring.middleware.basic-authentication]))
+(ns portfolio.web
+  (:use [clojure.walk                     :only [keywordize-keys]]
+        [portfolio.images                 :as images]
+        [portfolio.data                   :as data]
+        [portfolio.util]
+        [hiccup.core]
+        [hiccup.page]
+        [hiccup.form]
+        [hiccup.element]
+        [compojure.core                   :only [defroutes GET POST ANY]]
+        [ring.util.response               :only [redirect]]
+        [ring.middleware.params           :only [wrap-params]]
+        [ring.middleware.file             :only [wrap-file]]
+        [ring.middleware.file-info        :only [wrap-file-info]]
+        [ring.middleware.multipart-params :only [wrap-multipart-params]]
+        [ring.middleware.basic-authentication]))
 
 ;; state
 (def production? (not (nil? (System/getenv "APP_DATA"))))
-(def *admin* false)
+(def ^:dynamic *admin* false)
 
 ;; routes
 (defn collections-url []
@@ -174,9 +177,9 @@
              (when-not (empty? (:caption p))
                [:div.caption (simple-format (:caption p))]))]))
 
-(def *thumb-dimensions* [100 100])
-(def *preview-dimensions* [500 375])
-(def *background-dimensions* [800 600])
+(def ^:dynamic *thumb-dimensions* [100 100])
+(def ^:dynamic *preview-dimensions* [500 375])
+(def ^:dynamic *background-dimensions* [800 600])
 
 (defn rfc1123-date-format [] (doto (java.text.SimpleDateFormat. "EEE, dd MMM yyyy HH:mm:ss z")
                                (.setTimeZone (java.util.TimeZone/getTimeZone "GMT"))))
@@ -241,7 +244,7 @@
                                 (vec c))))
           {:status 200}))
 
-  (POST "/collection/:slug" {{:strs [slug] :as params} :params}
+  (POST "/collection/:slug" {{slug :slug :as params} :params}
         (let [c (data/collection-update (data/collection-by-slug slug)
                                         (select-keys (keywordize-keys params)
                                                      [:name :description]))]
@@ -261,13 +264,13 @@
             (collection-view c p)
             (redirect (str (collection-url c) "#p-" (:slug p))))))
 
-  (POST "/collection/:slug/reorder" {{slug "slug", slugs "slugs[]"} :params}
+  (POST "/collection/:slug/reorder" {{slug :slug, slugs "slugs[]"} :params}
         (let [c (data/collection-by-slug slug)
               p (map data/photo-by-slug slugs)]
           (data/collection-update c {:photos (vec  p)})
           {:status 200}))
 
-  (POST "/photo/:slug" {{:strs [slug] :as params} :params}
+  (POST "/photo/:slug" {{slug :slug :as params} :params}
         (let [p (data/photo-by-slug slug)]
           (data/photo-update p (select-keys (keywordize-keys params)
                                             [:title :caption]))
@@ -284,7 +287,7 @@
        (= p (data/site :password))))
 
 (defn wrap-admin [app]
-  (ANY "/admin/*" {{path "*"} :params}
+  (ANY ["/admin/:path" :path #".*"] [path]
        (let [app (wrap-basic-authentication
                   (fn [req]
                     (binding [*admin* true]
@@ -298,10 +301,18 @@
   (wrap-admin public-routes)
   (wrap-admin private-routes))
 
-(defroutes app
+(defroutes handler
   public-routes (var admin))
 
-(wrap! app
-       :multipart-params
-       (:file "public")
-       :file-info)
+(defn wrap-debug [app]
+  (fn [req]
+    (println {:REQ req})
+    (let [resp (app req)]
+      (println {:RESP resp})
+      resp)))
+
+(def app (-> handler
+             wrap-params
+             wrap-multipart-params
+             (wrap-file "public")
+             wrap-file-info))
