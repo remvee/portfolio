@@ -143,12 +143,13 @@
   (first (filter #(some (partial = photo) (:photos %))
                  (collections))))
 
-(def photo-validator (v/validator (v/not-blank :title :slug)
-                                  (v/skel :data :need-data
-                                          (fn [before after]
-                                            (and (empty? before)
-                                                 (or (empty? (:data after))
-                                                     (= 0 (:size (:data after)))))))))
+(def photo-validator (v/validator
+                        (v/not-blank :title :slug)
+                        (v/skel [:data] :need-data
+                           (fn [_ before after]
+                             (and (empty? before)
+                                  (or (empty? (:data after))
+                                      (= 0 (:size (:data after)))))))))
 
 (defn photo-validate
   "Validate photo fields."
