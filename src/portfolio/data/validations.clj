@@ -1,16 +1,8 @@
 (ns #^{:author "Remco van 't Veer"
        :doc "Basic validation framework for maps."}
-  portfolio.data.validations
-  (:use [clojure.test]))
+  portfolio.data.validations)
 
-(defn- merge-errors
-  {:test #(are [expected map errors] (= expected
-                                        (:errors (meta (merge-errors map errors))))
-               {:bar [:quux]}
-               {:foo 1} {:bar [:quux]}
-
-               {:bar [:flarp :quux]}
-               (with-meta {:foo 1} {:errors {:bar [:flarp]}}) {:bar [:quux]})}
+(defn merge-errors
   [map errors]
   (if (empty? errors)
     map
@@ -57,14 +49,6 @@ and pred the function to preform the validation."
 
 (defn less-than
   "Attribute must be less then validation."
-  {:test #(are [expected attrs amount]
-               (= expected
-                  (:errors (meta ((validator (less-than amount :count))
-                                  nil attrs))))
-               
-               nil nil nil
-               nil {:count 1} 2
-               {:count [{:less-than 2}]} {:count 3} 2)}
   [chain amount & attrs]
   (skel chain attrs {:less-than amount} (fn [attr _ after]
                                           (and (number? (attr after))
@@ -72,41 +56,8 @@ and pred the function to preform the validation."
 
 (defn unique
   "Attribute must be uniq to collection returned by collfn."
-  {:test #(are [expected before after coll]
-               (= expected
-                  (:errors (meta ((validator (unique (fn [] coll) :id))
-                                  before after))))
-               
-               nil nil {} []
-               nil nil {:id 1} []
-               {:id [:unique]} nil {:id 1} [{:id 1}]
-               nil {:id 1} {:id 1 :foo 1} [{:id 1}]
-               {:id [:unique]} {:id 1 :bar 1} {:id 1 :foo 1} [{:id 1}]
-               nil nil {:id 2} [{:id 1}])}
   [chain collfn & attrs]
   (skel chain attrs :unique (fn [attr before after]
                               (some #(= (attr after) (attr %))
                                     (filter (partial not= before)
                                             (collfn))))))
-
-(deftest example
-  (are [expected input]
-       (= expected
-          (:errors (meta ((validator (not-blank :name :nr)
-                                     (numeric :nr)
-                                     (less-than 10 :count))
-                          {} input))))
-
-       nil
-       {:nr 1, :name "test", :count 5}
-       
-       {:nr [:numeric :not-blank]
-        :name [:not-blank]}
-       {:foo "bar"}
-       
-       {:name [:not-blank]
-        :nr [:numeric]}
-       {:nr "foo"}
-
-       {:count [{:less-than 10}]}
-       {:nr 1, :name "test", :count 11}))

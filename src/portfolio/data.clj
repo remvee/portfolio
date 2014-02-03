@@ -9,8 +9,6 @@
 (ns #^{:author "Remco van 't Veer"
        :doc "Site data accessors."}
   portfolio.data
-  (:use
-   [clojure.test])
   (:require
    [clojure.string :as s]
    [clojure.java.io :as io :only [copy file]]
@@ -56,9 +54,6 @@
 ;; helpers
 (defn name->slug
   "Translate a name into a URL friendly slug."
-  {:test #(do
-            (is (= "name-alt" (name->slug "name" ["name"])))
-            (is (= "name-alt-alt" (name->slug "name" ["name" "name-alt"]))))}
   ([name]
      (s/replace
         (s/replace (or name "") #"(?i)[^a-z0-9_-]" "-")
